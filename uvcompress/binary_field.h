@@ -2,8 +2,10 @@
 #define BIN_FIELD_H
 
 #include <cassert>
+#include <cmath>
 
 #define MAX_BITS 16
+#define MAX_VALUE pow(2, MAX_BITS) - 1
 
 /*
  * Represents a sequence of between 0 and 17 bits.

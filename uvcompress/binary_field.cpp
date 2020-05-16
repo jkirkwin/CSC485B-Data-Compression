@@ -5,7 +5,7 @@ void BinaryField::reverse() {
     int mid = bits/2;
     int i;
     for (i = 0; i < mid; i++) {
-        swapBits(i, bits - i);
+        swapBits(i, bits - i - 1); 
     }
 }
 
