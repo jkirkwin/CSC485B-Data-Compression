@@ -1,8 +1,11 @@
 CXXFLAGS=-O3 -Wall -std=c++17
 
-all: uvcompress
+all: uvcompress test
 
 test: test_binary_field
+
+compress_fs_encoder: compress_fs_encoder.h compress_fs_encoder.cpp
+	$(CXX) -c $(CXXFLAGS) compress_fs_encoder.cpp
 
 test_binary_field: binary_field test_binary_field.cpp
 	$(CXX) -c $(CXXFLAGS) test_binary_field.cpp
@@ -13,4 +16,4 @@ binary_field: binary_field.cpp binary_field.h
 	$(CXX) -c $(CXXFLAGS) binary_field.cpp
 
 clean:
-	rm -f uvcompress *.o test*.exe
+	rm -f uvcompress *.o test*.exe *.stackdump
