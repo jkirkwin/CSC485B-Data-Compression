@@ -4,15 +4,15 @@
 #include <cassert>
 #include <cmath>
 
-#define MAX_BITS 16
+#define MAX_BITS 24 
 #define MAX_VALUE pow(2, MAX_BITS) - 1
 
 /*
- * Represents a sequence of between 0 and 17 bits.
+ * Represents a sequence of between 0 and 24 bits.
  */ 
 class BinaryField {
     public:
-        BinaryField(unsigned short data, int bits) {
+        BinaryField(unsigned int data, int bits) {
             assert (validBitCount(bits));
             this->bits = bits;
             this->data = data;
@@ -67,7 +67,7 @@ class BinaryField {
         }
   
     private:
-        unsigned short data;
+        unsigned int data;
         int bits;
 
         bool validBitCount(int i) {

@@ -25,7 +25,7 @@ void BinaryField::unsetBit(int i) {
     assert (0 <= i && i <= bits);
     
     // Use of 1U influenced by http://graphics.stanford.edu/~seander/bithacks.html#SwappingBitsXOR
-    unsigned short mask = ~(1U << i);
+    unsigned int mask = ~(1U << i);
     data = data & mask;
 }
 
