@@ -38,3 +38,13 @@ void BinaryField::swapBits(int i, int j) {
         flipBit(j);
     }
 }
+
+BinaryField BinaryField::prepend(BinaryField other) {
+    int totalBits = this->bits + other.bits;
+    int combinedData = (other.data << this->bits) | this->data;
+    return BinaryField(combinedData, totalBits);
+}
+
+BinaryField BinaryField::append(BinaryField other) {
+    return other.prepend(*this);
+}

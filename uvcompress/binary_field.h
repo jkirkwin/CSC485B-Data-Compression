@@ -15,7 +15,7 @@ class BinaryField {
         BinaryField(unsigned int data, int bits) {
             assert (validBitCount(bits));
             this->bits = bits;
-            this->data = data;
+            this->data = data & getMask(bits);
         }
   
         int getBits() const {
@@ -27,6 +27,19 @@ class BinaryField {
         }
 
         void reverse();
+
+
+        /*
+         * Creates a new BinaryField which uses this as the least significant
+         * bit sequence prepended by the given BinaryField.
+         */ 
+        BinaryField prepend(BinaryField);
+
+        /*
+         * Creates a new BinaryField which uses this as the most significant 
+         * bit sequence followed by the given BinaryField. 
+         */ 
+        BinaryField append(BinaryField);
 
         /*
          * Answers whether the ith bit is set (where the lsbit is indexed 0).
@@ -72,6 +85,15 @@ class BinaryField {
 
         bool validBitCount(int i) {
             return 0 <= i && i <= MAX_BITS;
+        }
+
+        /*
+         * Returns a mask of n bits padded (on the left) with zeros.
+         * 
+         * From https://stackoverflow.com/questions/1392059/algorithm-to-generate-bit-mask
+         */
+        int getMask(int n) {
+            return (1 << n) - 1;
         }
 
         void swapBits(int i, int j); 
