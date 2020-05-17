@@ -28,7 +28,7 @@ class FSEncoder {
         void flush();
 
     private:
-        BinaryField inBuffer;
+        BinaryField* inBuffer;
 };
 
 #endif
