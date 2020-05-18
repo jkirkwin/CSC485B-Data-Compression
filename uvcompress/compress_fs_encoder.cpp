@@ -12,7 +12,11 @@ FSEncoder::FSEncoder() {
     unsigned char magicNumLSB = MAGIC_NUMBER & 0xFF;
     unsigned char mode = MODE;
     std::cout << magicNumMSB << magicNumLSB << mode;
-    *inBuffer = BinaryField(0,0);
+    inBuffer = new BinaryField(0,0); // todo this is causing a seg fault on ubuntu error
+}
+
+FSEncoder::~FSEncoder() {
+    delete inBuffer;
 }
 
 BinaryField getMsb(BinaryField field) {

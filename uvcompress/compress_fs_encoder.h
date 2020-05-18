@@ -34,6 +34,7 @@ class FSEncoder {
          */ 
         void flush();
 
+        ~FSEncoder();
     private:
         BinaryField* inBuffer;
 };
