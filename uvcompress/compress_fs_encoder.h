@@ -2,6 +2,7 @@
 #define COMPRESS_FS_ENCODER_H
 
 #include "binary_field.h"
+#include <iostream>
 
 #define MAGIC_NUMBER 0x1f9d 
 #define MAGIC_NUMBER_BITS 16 
@@ -14,7 +15,7 @@
  */
 class FSEncoder {
     public:
-        FSEncoder();
+        FSEncoder(std::ostream* outStream = &std::cout);
 
         void acceptData(unsigned short data, int numBits) {
             BinaryField binaryFieldData(data, numBits);
@@ -36,6 +37,7 @@ class FSEncoder {
 
         ~FSEncoder();
     private:
+        std::ostream* outStream;
         BinaryField* inBuffer;
 };
 

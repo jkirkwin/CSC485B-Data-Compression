@@ -3,16 +3,17 @@
 #include <cassert>
 #include <iostream>
 
-// TODO Inject an ostream rather than using cin directly
 // TODO Add tests
 
-FSEncoder::FSEncoder() {
+FSEncoder::FSEncoder(std::ostream* outStream) {
     // TODO consider making this conditional on receiving some input.
+    inBuffer = new BinaryField(0,0);
+    this->outStream = outStream;
+
     unsigned char magicNumMSB = (MAGIC_NUMBER >> 8) & 0xFF;
     unsigned char magicNumLSB = MAGIC_NUMBER & 0xFF;
     unsigned char mode = MODE;
-    std::cout << magicNumMSB << magicNumLSB << mode;
-    inBuffer = new BinaryField(0,0); // todo this is causing a seg fault on ubuntu error
+    *outStream << magicNumMSB << magicNumLSB << mode;
 }
 
 FSEncoder::~FSEncoder() {
@@ -34,7 +35,7 @@ void FSEncoder::acceptData(BinaryField symbol) {
         // Reverse each group of 8 bits and output it
         BinaryField msb = getMsb(reversedData);
         msb.reverse();
-        std::cout << msb.getData();
+        *outStream << msb.getData();
 
         int newBitCount = reversedData.getBits() - 8;
         reversedData = BinaryField(reversedData.getData(), newBitCount);
@@ -48,9 +49,9 @@ void FSEncoder::flush() {
     assert (inBuffer->getBits() < 8); // Sanity check
 
     if (inBuffer->getBits() > 0) {
-        // Pad last byte to size
+        // Pad last byte to size and output
         unsigned char data = inBuffer->getData();
         unsigned char paddedData = data << (8 - inBuffer->getBits());
-        std::cout << paddedData;
+        *outStream << paddedData;
     }
 }

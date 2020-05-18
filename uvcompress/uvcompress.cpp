@@ -16,7 +16,7 @@
  */ 
 // TODO Test running the executable with no input (should produce no input) 
 int main() {
-    FSEncoder *fSEncoder = new FSEncoder;
+    FSEncoder *fSEncoder = new FSEncoder();
     LzwEncoder lzwEncoder(fSEncoder);
 
     char c;
