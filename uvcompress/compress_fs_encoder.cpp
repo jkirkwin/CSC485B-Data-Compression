@@ -26,7 +26,7 @@ void FSEncoder::acceptData(BinaryField symbol) {
     
     // Group into bytes
     BinaryField reversedData = inBuffer->append(symbol); 
-    while (reversedData.getBits() > 8) {
+    while (reversedData.getBits() >= 8) {
         // Reverse each group of 8 bits and output it
         BinaryField msb = getMsb(reversedData);
         msb.reverse();
