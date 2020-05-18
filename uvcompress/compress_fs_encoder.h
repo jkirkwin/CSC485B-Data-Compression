@@ -15,12 +15,12 @@
  */
 class FSEncoder {
     public:
-        FSEncoder(std::ostream* outStream = &std::cout);
 
-        void acceptData(unsigned short data, int numBits) {
-            BinaryField binaryFieldData(data, numBits);
-            acceptData(binaryFieldData);
-        }
+        /*
+         * Creates an FSEncoder which sends output to the given stream, or to 
+         * std::cout if no stream is specified.
+         */ 
+        FSEncoder(std::ostream* outStream = &std::cout);
 
         /*
          * Takes the given data as input. This does not guarantee that anything
@@ -29,9 +29,9 @@ class FSEncoder {
         void acceptData(BinaryField data);
 
         /**
-         * Flush the remaining buffered input to stdout. This should only be 
-         * called when the entire input stream has been passed to this object
-         * via acceptData(). 
+         * Flush the remaining buffered input to the output stream. This 
+         * should only be called after the entire input stream has been passed 
+         * to this object via acceptData(). 
          */ 
         void flush();
 

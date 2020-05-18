@@ -9,7 +9,7 @@ all: uvcompress test
 
 test: test_binary_field test_fs_encoder
 
-lzw_encoder: lzw_encoder.h lzw_encoder.cpp compress_fs_encoder.h # TODO break this dependency
+lzw_encoder: lzw_encoder.h lzw_encoder.cpp binary_field
 	$(CXX) -c $(CXXFLAGS) lzw_encoder.cpp
 
 compress_fs_encoder: compress_fs_encoder.h compress_fs_encoder.cpp

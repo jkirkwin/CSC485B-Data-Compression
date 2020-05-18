@@ -6,6 +6,21 @@
 #include <iostream>
 #include "compress_fs_encoder.h"
 #include "lzw_encoder.h"
+#include <functional>
+
+LzwEncoder getLzwEncoder(FSEncoder& downstreamEncoder) {
+    using namespace std::placeholders;
+    consumer_t forwarder = std::bind(&FSEncoder::acceptData, &downstreamEncoder, _1);
+    LzwEncoder lzwEncoder(forwarder);
+    return lzwEncoder;
+}
+
+void sendStdinToEncoder(LzwEncoder encoder) {
+    char c;
+    while(std::cin.get(c)) {
+        encoder.acceptChar(c);
+    }
+}
 
 /**
  * Uses the LZW algorithm as implemented in the UNIX compress utility to 
@@ -14,17 +29,15 @@
  * Reset markers are not used due to historical bugs in the compress utility's
  * implementation.  
  */ 
-// TODO Test running the executable with no input (should produce no input) 
+// TODO Test running the executable with no input (should produce no output) 
 int main() {
-    FSEncoder *fSEncoder = new FSEncoder();
-    LzwEncoder lzwEncoder(fSEncoder);
+    FSEncoder fSEncoder; 
+    auto lzwEncoder = getLzwEncoder(fSEncoder);    
 
-    char c;
-    while(std::cin.get(c)) {
-        lzwEncoder.acceptChar(c);
-    }
+    sendStdinToEncoder(lzwEncoder);
+
     lzwEncoder.flush();
+    fSEncoder.flush();
 
-    delete fSEncoder;
     return 0;
 }

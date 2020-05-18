@@ -2,9 +2,10 @@
 #include "lzw_encoder.h"
 #include <limits.h>
 #include <cassert>
+#include <functional>
 
-LzwEncoder::LzwEncoder(FSEncoder* fsEncoder) {
-    this->fsEncoder = fsEncoder;
+LzwEncoder::LzwEncoder(consumer_t& acceptBinaryData) {
+    this->acceptBinaryData = acceptBinaryData;
 
     // Insert all single-character values into the symbol table
     int i = 0;
@@ -14,7 +15,8 @@ LzwEncoder::LzwEncoder(FSEncoder* fsEncoder) {
         symbolTable.insert(entry);
     }
 
-    // Todo I don't think I need to insert an entry for the reset marker
+    // TODO Verify:
+    // I don't think I need to insert an entry for the reset marker
     // since we're not using a contiguous structure like an array.
 
     // Account for reset marker at index 0x100
@@ -23,7 +25,7 @@ LzwEncoder::LzwEncoder(FSEncoder* fsEncoder) {
 
 void LzwEncoder::acceptChar(char nextChar) {
 
-    int maxIndex = pow(2, MAX_INDEX_BITS); // TODO Move this so it isn't recomputed each time.
+    int maxIndex = pow(2, MAX_INDEX_BITS); // TODO Move this so it isn't recomputed on each call.
     std::string augmented = workingStr + nextChar;
 
     if (symbolTable.find(augmented) != symbolTable.end()) {
@@ -33,7 +35,7 @@ void LzwEncoder::acceptChar(char nextChar) {
         // todo duplicated below
         auto index = symbolTable[workingStr];
         workingStr = std::string(1, nextChar);
-        fsEncoder->acceptData(index, numBits);
+        acceptBinaryData(BinaryField(index, numBits));
     }
     else {
         std::pair<std::string, int> augmentedEntry (augmented, nextIndex++);
@@ -42,7 +44,7 @@ void LzwEncoder::acceptChar(char nextChar) {
         // todo duplicated above
         auto index = symbolTable[workingStr];
         workingStr = std::string(1, nextChar);
-        fsEncoder->acceptData(index, numBits);
+        acceptBinaryData(BinaryField(index, numBits));
 
         if (nextIndex > pow(2, numBits)) {
             numBits++;
@@ -54,7 +56,6 @@ void LzwEncoder::flush() {
     if (!workingStr.empty()) {
         // todo partially triplicated in accept()
         auto index = symbolTable[workingStr];
-        fsEncoder->acceptData(index, numBits);
+        acceptBinaryData(BinaryField(index, numBits));
     }
-    fsEncoder->flush();
 }
