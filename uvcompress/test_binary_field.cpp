@@ -52,10 +52,27 @@ void testAppend() {
     assert (ff0.getData() == 0xff0);
 }
 
+void testEquality() {
+    BinaryField a1 (13, 7);
+    BinaryField a2 (13, 7);
+    BinaryField b (14, 7);
+    BinaryField c (13, 6);
+
+    assert (a1 == a2);
+    assert ( !(a1 != a2) );
+
+    assert ( !(a1 == b) );
+    assert (a1 != b);
+
+    assert ( !(a1 == c) );
+    assert (a1 != c);
+}
+
 // todo refactor this (and update local env) to use boost test lib
 int main() {
     std::cout << "BinaryField -- Running Tests." << std::endl;
     testReverse();
     testAppend();
+    testEquality();
     std::cout << "BinaryField -- all tests passed." << std::endl;
 }

@@ -28,6 +28,14 @@ class BinaryField {
 
         void reverse();
 
+        bool operator== (const BinaryField &other) const {
+            return this->bits == other.bits && 
+                   this->data == other.data;
+        }
+        
+        bool operator!= (const BinaryField &other) const {
+            return ! (*this == other);
+        }
 
         /*
          * Creates a new BinaryField which uses this as the least significant
