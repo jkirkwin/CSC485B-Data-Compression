@@ -24,4 +24,4 @@ binary_field: binary_field.cpp binary_field.h
 	$(CXX) -c $(CXXFLAGS) binary_field.cpp
 
 clean:
-	rm -f uvcompress *.o test*.exe *.stackdump
+	rm -f uvcompress test_binary_field *.o test*.exe *.stackdump vgcore*
