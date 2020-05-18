@@ -54,7 +54,8 @@ void testAppend() {
 
 // todo refactor this (and update local env) to use boost test lib
 int main() {
+    std::cout << "BinaryField -- Running Tests." << std::endl;
     testReverse();
     testAppend();
-    std::cout << "all tests passed." << std::endl;
+    std::cout << "BinaryField -- all tests passed." << std::endl;
 }
