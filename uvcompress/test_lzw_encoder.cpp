@@ -25,6 +25,12 @@ class MockDownstreamEncoder {
         }
 
         bool receivedData = false;
+
+        // https://stackoverflow.com/questions/709146/how-do-i-clear-the-stdqueue-efficiently
+        void clearData() {
+            std::queue<BinaryField> empty;
+            q.swap(empty);
+        }
         
         BinaryField getNextDatum() {
             auto front = q.front();
@@ -156,19 +162,84 @@ void testShortSequence() {
 }
 
 /*
- * Once all indexes which can be made using 9 bits are allocated, the encoder
- * should start outputting 10-bit symbols.
+ * Sends each possible character to the encoder.
+ *  
+ * A sequence of distinct characters c1, c2, ...., cn generates n-1 entries
+ * in the symbol table, provided every pair of consecutive characters has not 
+ * been seen before.
+ */ 
+void sendChars(LzwEncoder& encoder) {
+    for(int i = 0; i <= UCHAR_MAX; i++) {
+        unsigned char c = i;
+        encoder.acceptChar(c);
+    }
+}
+
+/*
+ * Once all indexes which can be made using the current number of bits are 
+ * allocated, the encoder should start outputting larger symbols.
  */ 
 void testIncreaseNumBits() {
-    assert (false); // todo
+    MockDownstreamEncoder mdse;
+    consumer_t adapter = getConsumer(mdse);
+    LzwEncoder encoder(adapter);
+
+    sendChars(encoder);
+    // There should now be 
+    //      256 (single chars) 
+    //    +  1 (reset marker)
+    //    + 255 (new len 2 strings) 
+    //    = 512 strings in the symbol table.
+    // The current working string should be the single character 0xFF and the next 
+    // index should be 512. 
+    
+    mdse.clearData();
+    encoder.acceptChar(0); 
+    assert ( mdse.getNextDatum() == BinaryField(0xFF, 9) );
+    
+    // The next symbol should use 10 bits.
+    encoder.flush();
+    assert ( mdse.getNextDatum() == BinaryField(0, 10) );
 }
 
 /**
- * Once the symbol table has grown to hold all possible 16-bit values, new 
- * strings should no longer be recorded.
+ * Once the symbol table has grown to hold all possible values given the 
+ * specified length constraint, new strings should no longer be recorded in the 
+ * table.
  */
 void testNumBitsNoOverflow() {
-    assert (false); // todo
+    MockDownstreamEncoder mdse;
+    consumer_t adapter = getConsumer(mdse);
+    LzwEncoder encoder(adapter, 9);
+
+    sendChars(encoder);
+    // There should now be 
+    //      256 (single chars) 
+    //    +  1 (reset marker)
+    //    + 255 (new len 2 strings) 
+    //    = 512 strings in the symbol table.
+    // The current working string should be the single character 0xFF and the next 
+    // index should be 512. 
+
+    mdse.clearData();
+    encoder.acceptChar(0); 
+    assert ( mdse.getNextDatum() == BinaryField(0xFF, 9) );
+
+    // The symbol table should now be full, and new strings should not be stored.
+    assert ( mdse.outputDepleted() );
+    encoder.acceptChar(2); // The encoder has never seen 0x00, 0x02 before.
+    assert ( !mdse.outputDepleted() );
+    assert ( mdse.getNextDatum() == BinaryField(0, 9) );
+    assert ( mdse.outputDepleted() );
+
+    // The encoder has now seen 0x00, 0x02 before, but it should not be in the 
+    // table.
+    encoder.acceptChar(0); 
+    assert ( mdse.getNextDatum() == BinaryField(2, 9) );
+    assert ( mdse.outputDepleted() );
+    encoder.acceptChar(2); 
+    assert ( ! mdse.outputDepleted() );
+    assert ( mdse.getNextDatum() == BinaryField(0, 9) );
 }
 
 // todo refactor this (and update local env) to use boost test lib
@@ -183,8 +254,8 @@ int main() {
     testOneCharNoOutputUntilFlush();
     testTwoCharEntryInSymbolTable();
     testShortSequence();
-    // testIncreaseNumBits();
-    // testNumBitsNoOverflow();
+    testIncreaseNumBits();
+    testNumBitsNoOverflow();
 
     std::cout << "LzwEncoder -- All Tests Passed!" << std::endl;
 

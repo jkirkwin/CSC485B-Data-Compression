@@ -5,7 +5,7 @@
 #include "binary_field.h"
 
 #define STARTING_INDEX_BITS 9
-#define MAX_INDEX_BITS 16
+#define COMPRESS_MAX_INDEX_BITS 16
 
 // For convenience. 
 typedef std::unordered_map<std::string, unsigned int> table_t; 
@@ -21,7 +21,7 @@ class LzwEncoder {
          * Creates a new LzwEncoder which sends its output to the given 
          * function.
          */
-        LzwEncoder(consumer_t& acceptBinaryData);
+        LzwEncoder(consumer_t& acceptBinaryData, int maxBits=COMPRESS_MAX_INDEX_BITS);
 
         /*
          * Processes the next input character. This may or may not result in a
@@ -39,6 +39,8 @@ class LzwEncoder {
         table_t symbolTable;
         int nextIndex = 0;
         int numBits = STARTING_INDEX_BITS;
+        int maxBits;
+        int maxIndex;
         std::string workingStr = "";
         consumer_t acceptBinaryData;
 };

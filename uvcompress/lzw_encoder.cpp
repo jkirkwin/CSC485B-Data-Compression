@@ -4,8 +4,12 @@
 #include <cassert>
 #include <functional>
 
-LzwEncoder::LzwEncoder(consumer_t& acceptBinaryData) {
+LzwEncoder::LzwEncoder(consumer_t& acceptBinaryData, int maxBits) {
+    assert(maxBits >= numBits);
+    
     this->acceptBinaryData = acceptBinaryData;
+    this->maxBits = maxBits;
+    this->maxIndex = 1 << maxBits;
 
     // Insert all single-character values into the symbol table
     int i = 0;
@@ -15,38 +19,33 @@ LzwEncoder::LzwEncoder(consumer_t& acceptBinaryData) {
         symbolTable.insert(entry);
     }
 
-    // TODO Verify:
-    // I don't think I need to insert an entry for the reset marker
-    // since we're not using a contiguous structure like an array.
-
     // Account for reset marker at index 0x100
     nextIndex = UCHAR_MAX + 2; 
 }
 
 void LzwEncoder::acceptChar(char nextChar) {
-
-    int maxIndex = pow(2, MAX_INDEX_BITS); // TODO Move this so it isn't recomputed on each call.
     std::string augmented = workingStr + nextChar;
 
     if (symbolTable.find(augmented) != symbolTable.end()) {
         workingStr = augmented;
     } 
-    else if (nextIndex > maxIndex) {
+    else if (nextIndex >= maxIndex) {
         // todo duplicated below
         auto index = symbolTable[workingStr];
         workingStr = std::string(1, nextChar);
         acceptBinaryData(BinaryField(index, numBits));
     }
     else {
-        std::pair<std::string, int> augmentedEntry (augmented, nextIndex++);
+        std::pair<std::string, int> augmentedEntry (augmented, nextIndex);
         symbolTable.insert(augmentedEntry);
+        nextIndex++;
 
         // todo duplicated above
         auto index = symbolTable[workingStr];
         workingStr = std::string(1, nextChar);
         acceptBinaryData(BinaryField(index, numBits));
 
-        if (nextIndex > pow(2, numBits)) {
+        if (nextIndex > (1 << numBits) ) {
             numBits++;
         }
     }
