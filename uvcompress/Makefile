@@ -1,4 +1,4 @@
-CXXFLAGS=-O3 -Wall -std=c++17
+CXXFLAGS=-O3 -g -Wall -std=c++17
 
 uvcompress: lzw_encoder compress_fs_encoder binary_field uvcompress.cpp
 	$(CXX) -c $(CXXFLAGS) uvcompress.cpp
