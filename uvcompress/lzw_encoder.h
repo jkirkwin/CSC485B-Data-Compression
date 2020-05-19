@@ -8,7 +8,7 @@
 #define MAX_INDEX_BITS 16
 
 // For convenience. 
-typedef std::unordered_map<std::string, int> table_t; 
+typedef std::unordered_map<std::string, unsigned int> table_t; 
 typedef std::function< void(BinaryField) > consumer_t;
 
 /*

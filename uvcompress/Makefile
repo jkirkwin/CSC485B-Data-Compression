@@ -7,10 +7,15 @@ uvcompress: lzw_encoder compress_fs_encoder binary_field uvcompress.cpp
 
 all: uvcompress test
 
-test: test_binary_field test_fs_encoder
+test: test_binary_field test_lzw_encoder test_fs_encoder
 
 lzw_encoder: lzw_encoder.h lzw_encoder.cpp binary_field
 	$(CXX) -c $(CXXFLAGS) lzw_encoder.cpp
+
+test_lzw_encoder: lzw_encoder test_lzw_encoder.cpp binary_field
+	$(CXX) -c $(CXXFLAGS) test_lzw_encoder.cpp
+	$(CXX) -o test_lzw_encoder $(CXXFLAGS) test_lzw_encoder.o lzw_encoder.o binary_field.o
+	./test_lzw_encoder
 
 compress_fs_encoder: compress_fs_encoder.h compress_fs_encoder.cpp
 	$(CXX) -c $(CXXFLAGS) compress_fs_encoder.cpp
