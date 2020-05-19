@@ -1,5 +1,7 @@
 # CSC 485B Assignment 1: `uvcompress`
 
+Jamie Kirkwin - V00875987
+
 ## General
 This project is an implementation of the 
 [LZW algorithm](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Welch)

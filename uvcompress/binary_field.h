@@ -1,3 +1,9 @@
+/* CSC 485B
+ * Jamie Kirkwin
+ * Assignment 1: uvcompress
+ * V00875987
+ */
+
 #ifndef BIN_FIELD_H
 #define BIN_FIELD_H
 

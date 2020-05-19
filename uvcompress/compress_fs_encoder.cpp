@@ -1,3 +1,8 @@
+/* CSC 485B
+ * Jamie Kirkwin
+ * Assignment 1: uvcompress
+ * V00875987
+ */
 #include "binary_field.h"
 #include "compress_fs_encoder.h"
 #include <cassert>

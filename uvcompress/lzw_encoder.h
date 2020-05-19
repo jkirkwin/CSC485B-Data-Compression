@@ -1,3 +1,9 @@
+/* CSC 485B
+ * Jamie Kirkwin
+ * Assignment 1: uvcompress
+ * V00875987
+ */
+
 #ifndef LZW_H
 #define LZW_H
 #include <unordered_map>

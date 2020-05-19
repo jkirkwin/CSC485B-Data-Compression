@@ -1,3 +1,9 @@
+/* CSC 485B
+ * Jamie Kirkwin
+ * Assignment 1: uvcompress
+ * V00875987
+ */
+
 #include <unordered_map>
 #include "lzw_encoder.h"
 #include <limits.h>

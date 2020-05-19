@@ -1,3 +1,9 @@
+/* CSC 485B
+ * Jamie Kirkwin
+ * Assignment 1: uvcompress
+ * V00875987
+ */
+
 #ifndef COMPRESS_FS_ENCODER_H
 #define COMPRESS_FS_ENCODER_H
 
