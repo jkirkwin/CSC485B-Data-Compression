@@ -50,8 +50,6 @@ void FSEncoder::flush() {
     assert (inBuffer->getBits() < 8); // Sanity check
 
     if (inBuffer->getBits() > 0) {
-        std::cerr << "FS - Flushing data" << std::endl;
-        
         // Pad last byte to size 
         unsigned char bufferData = inBuffer->getData();
         unsigned char paddedBufferData = bufferData << (8 - inBuffer->getBits());
