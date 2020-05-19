@@ -15,7 +15,7 @@ LzwEncoder getLzwEncoder(FSEncoder& downstreamEncoder) {
     return lzwEncoder;
 }
 
-void sendStdinToEncoder(LzwEncoder encoder) {
+void sendStdinToEncoder(LzwEncoder& encoder) {
     char c;
     while(std::cin.get(c)) {
         encoder.acceptChar(c);
@@ -29,7 +29,6 @@ void sendStdinToEncoder(LzwEncoder encoder) {
  * Reset markers are not used due to historical bugs in the compress utility's
  * implementation.  
  */ 
-// TODO Test running the executable with no input (should produce no output) 
 int main() {
     FSEncoder fSEncoder; 
     auto lzwEncoder = getLzwEncoder(fSEncoder);    
