@@ -34,4 +34,4 @@ test_binary_field: binary_field test_binary_field.cpp
 	./test_binary_field
 
 clean:
-	rm -f uvcompress test_binary_field *.o test*.exe *.stackdump vgcore*
+	rm -f uvcompress test_binary_field *.o test*.exe *.stackdump vgcore* test_lzw_encoder test_fs_encoder
