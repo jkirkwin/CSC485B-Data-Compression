@@ -4,9 +4,9 @@
 #include "binary_field.h"
 #include <iostream>
 
-#define MAGIC_NUMBER 0x1f9d 
-#define MAGIC_NUMBER_BITS 16 
-#define MODE 0x90
+#define MAGIC_NUMBER_MSB 0x1fU
+#define MAGIC_NUMBER_LSB 0x9dU
+#define MODE 0x90U
 #define MODE_BITS 8
 
 /*

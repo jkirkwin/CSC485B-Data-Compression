@@ -10,8 +10,8 @@ FSEncoder::FSEncoder(std::ostream* outStream) {
     inBuffer = new BinaryField(0,0);
     this->outStream = outStream;
 
-    unsigned char magicNumMSB = (MAGIC_NUMBER >> 8) & 0xFF;
-    unsigned char magicNumLSB = MAGIC_NUMBER & 0xFF;
+    unsigned char magicNumMSB = MAGIC_NUMBER_MSB;
+    unsigned char magicNumLSB = MAGIC_NUMBER_LSB;
     unsigned char mode = MODE;
     *outStream << magicNumMSB << magicNumLSB << mode;
 }
@@ -22,7 +22,7 @@ FSEncoder::~FSEncoder() {
 
 BinaryField getMsb(BinaryField field) {
     int shift = std::max(0, field.getBits() - 8);
-    unsigned char msb = field.getData() >> shift;
+    unsigned char msb = (field.getData() >> shift) & 0xFF;
     return BinaryField(msb, 8);
 }
 
@@ -35,7 +35,8 @@ void FSEncoder::acceptData(BinaryField symbol) {
         // Reverse each group of 8 bits and output it
         BinaryField msb = getMsb(reversedData);
         msb.reverse();
-        *outStream << msb.getData();
+        unsigned char byte = msb.getData();
+        outStream->put(byte);
 
         int newBitCount = reversedData.getBits() - 8;
         reversedData = BinaryField(reversedData.getData(), newBitCount);
@@ -49,9 +50,17 @@ void FSEncoder::flush() {
     assert (inBuffer->getBits() < 8); // Sanity check
 
     if (inBuffer->getBits() > 0) {
-        // Pad last byte to size and output
-        unsigned char data = inBuffer->getData();
-        unsigned char paddedData = data << (8 - inBuffer->getBits());
-        *outStream << paddedData;
+        std::cerr << "FS - Flushing data" << std::endl;
+        
+        // Pad last byte to size 
+        unsigned char bufferData = inBuffer->getData();
+        unsigned char paddedBufferData = bufferData << (8 - inBuffer->getBits());
+
+        // Reverse and output
+        auto paddedField = BinaryField(paddedBufferData, 8);
+        paddedField.reverse();
+        unsigned char resultData = paddedField.getData();
+
+        outStream->put(resultData);
     }
 }
