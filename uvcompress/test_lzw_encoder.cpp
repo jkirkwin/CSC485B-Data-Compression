@@ -75,6 +75,7 @@ void testOneCharNoOutputUntilFlush() {
     assert ( result == expected );
     assert ( mdse.outputDepleted() );
 }
+
 /*
  * Given an input abab, the first and and b should be output separately. When 
  * flushed, the second a and b should produce a single symbol which is the 
