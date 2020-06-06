@@ -1,3 +1,4 @@
 test_data/
 gzstat/
 gzip_reference
+cmake-build-debug/
