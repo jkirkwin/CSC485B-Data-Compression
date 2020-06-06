@@ -18,8 +18,15 @@
 #define CRCPP_USE_CPP11
 #include "CRC.h"
 
-
-
+void push_gzip_header(OutputBitStream& stream) {
+    stream.push_bytes( 0x1f, 0x8b, //Magic Number
+                       0x08, //Compression (0x08 = DEFLATE)
+                       0x00, //Flags
+                       0x00, 0x00, 0x00, 0x00, //MTIME (little endian)
+                       0x00, //Extra flags
+                       0x03 //OS (Linux)
+    );
+}
 
 int main(){
 
@@ -30,13 +37,7 @@ int main(){
     auto crc_table = CRC::CRC_32().MakeTable();
 
     //Push a basic gzip header
-    stream.push_bytes( 0x1f, 0x8b, //Magic Number
-        0x08, //Compression (0x08 = DEFLATE)
-        0x00, //Flags
-        0x00, 0x00, 0x00, 0x00, //MTIME (little endian)
-        0x00, //Extra flags
-        0x03 //OS (Linux)
-    );
+    push_gzip_header(stream);
 
 
     //This starter implementation writes a series of blocks with type 0 (store only)

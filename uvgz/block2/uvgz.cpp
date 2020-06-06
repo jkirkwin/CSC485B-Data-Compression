@@ -215,14 +215,6 @@ int main(){
         0x03 //OS (Linux)
     );
 
-
-    //This starter implementation writes a series of blocks with type 0 (store only)
-    //Each store-only block can contain up to 2**16 - 1 bytes of data.
-    //(This limit does NOT apply to block types 1 and 2)
-    //Since we have to keep track of how big each block is (and whether any more blocks 
-    //follow it), we have to save up the data for each block in an array before writing it.
-    
-
     //Note that the types u8, u16 and u32 are defined in the output_stream.hpp header
     Block block_contents {};
     u32 block_size {0};
