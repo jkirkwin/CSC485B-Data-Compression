@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <string>
 #include "output_stream.hpp"
+#include "deflate.h"
 
 // To compute CRC32 values, we can use this library
 // from https://github.com/d-bahr/CRCpp
@@ -28,7 +29,7 @@ void push_gzip_header(OutputBitStream& stream) {
     );
 }
 
-int main(){
+int main() {
 
     //See output_stream.hpp for a description of the OutputBitStream class
     OutputBitStream stream {std::cout};
