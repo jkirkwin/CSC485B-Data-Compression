@@ -17,10 +17,7 @@
 #include <iostream>
 #include <cstdint>
 
-/* These definitions are more reliable for fixed width types than using "int" and assuming its width */
-using u8 = std::uint8_t;
-using u16 = std::uint16_t;
-using u32 = std::uint32_t;
+#include "binary.h"
 
 
 
@@ -33,8 +30,7 @@ public:
 
     /* Destructor (output any leftover bits) */
     virtual ~OutputBitStream(){
-        if (numbits > 0)
-            output_byte();
+        flush_to_byte();
     }
 
     /* Push an entire byte into the stream, with the least significant bit pushed first */
