@@ -1,5 +1,9 @@
+#ifndef UVGZ_LZSS_H
+#define UVGZ_LZSS_H
+
 #include <iostream>
-#include "binary.h"
+#include "shared/binary.h"
+
 
 // todo is the total buffer size LOOKAHEAD + HISTORY + 1? Just LOOKAHEAD + HISTORY? Just HISTORY?
 #define LOOKAHEAD_SIZE 258
@@ -16,60 +20,56 @@ public:
     /**
      * todo
      */
-    LzssEncoder() {
-    // todo
-    }
+    LzssEncoder(); // todo
 
     /**
      * Accepts a single byte in. This may or may not result in a symbol or
      * symbols being output.
      */
-    void acceptByte(u8 byte) {
-        // todo
-        // fill the buffer until the lookahead is full.
-        // if the buffer is full when this is called, try to find a backreference for the next data and output it.
-        std::cout << byte;
-    }
+    void acceptByte(u8 byte);
 
     /**
      * Any unprocessed input sitting in the lookahead buffer is processed and
      * all encoded data is guaranteed to be output after this call.
      */
-    void flush() {
-        // todo
-        // process all data in the lookahead and output it
-    }
+    void flush();
 
     /**
      * todo
      */
-    ~LzssEncoder() {
-        // todo
-    }
+    // ~LzssEncoder(); // todo needed?
 private:
     // todo add buffer - need to be able to shift it over as we go
     //      Ring buffer?
 };
 
 
+typedef signed int buffer_index_t;
+
 /**
  * A ring buffer implementation to be used by the LZSS encoder to store history and lookahead data.
  */
-class LzssBuffer {
-public:
-    /**
-     *  Get the bytes from start (inclusive) to end (exclusive).
-     *
-     * @return a std::array of bytes.
-     */
-//    std::array<u8> get(int start, int end);
+// class LzssBuffer {
+// public:
+
+//     LzssBuffer();
+
+//     /**
+//      *  Get the bytes from start (inclusive) to end (exclusive).
+//      *
+//      * @return a std::array of bytes.
+//      */
+//      void get(buffer_index_t start, buffer_index_t end);
+// //    std::array<u8> get(int start, int end);
 
 
-//    u8 get(int i);
+// //    u8 get(int i);
 
-//    u8 peekNext()
+// //    u8 peekNext()
 
-    // todo might be easiest to wrap domain-specific functions around some standard implementation like
-    //      boost::circular_buffer
-};
+//     // todo might be easiest to wrap domain-specific functions around some standard implementation like
+//     //      boost::circular_buffer
+// };
 
+
+#endif // UVGZ_LZSS_H

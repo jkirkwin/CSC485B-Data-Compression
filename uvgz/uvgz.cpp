@@ -13,6 +13,7 @@
 #include <string>
 #include "output_stream.hpp"
 #include "deflate.h"
+#include "gzip.h"
 
 // To compute CRC32 values, we can use this library
 // from https://github.com/d-bahr/CRCpp
