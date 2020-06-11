@@ -162,7 +162,7 @@ TEST_CASE("Backref distance conversions are correct", "[lzss] [backref]") {
 
 TEST_CASE("Flush empties buffer to the output function", "[lzss] [flush]") {
     MockDownstreamConsumer<bitset> mockConsumer; // todo make this and the encoder test fixtures
-    LzssEncoder::bitset_consumer_t consumerFunction = mockConsumer.getConsumerFunction();
+    LzssEncoder::symbol_consumer_t consumerFunction = mockConsumer.getConsumerFunction();
     LzssEncoder encoder(consumerFunction);
 
     SECTION("No input -> No output") {
@@ -183,15 +183,15 @@ TEST_CASE("Flush empties buffer to the output function", "[lzss] [flush]") {
         REQUIRE(mockConsumer.outputDepleted());
     }
     SECTION("N inputs -> N literals") {
-        const u8 limit = 0xFF;
+        const u8 limit = 0x0F;
 
-        for (u8 input = 0; input < limit; ++input) {
+        for (u8 input = 0; input <= limit; ++input) {
             encoder.acceptByte(input);
         }
         REQUIRE(!mockConsumer.receivedData);
 
         encoder.flush();
-        for(u8 val = 0; val < limit; ++val) {
+        for(u8 val = 0; val <= limit; ++val) {
             const bitset oracle(LITERAL_BITS, val);
             REQUIRE(mockConsumer.popNextDatum() == oracle);
         }
@@ -201,7 +201,7 @@ TEST_CASE("Flush empties buffer to the output function", "[lzss] [flush]") {
 
 TEST_CASE("Obvious patterns in simple stream yield back-references", "[backref] [lzss]") {
     MockDownstreamConsumer<bitset> mockConsumer; // todo make this and the encoder test fixtures
-    LzssEncoder::bitset_consumer_t consumerFunction = mockConsumer.getConsumerFunction();
+    LzssEncoder::symbol_consumer_t consumerFunction = mockConsumer.getConsumerFunction();
     LzssEncoder encoder(consumerFunction);
 
     SECTION("2 * 10 character pattern -> one backref") {
@@ -219,7 +219,7 @@ TEST_CASE("Obvious patterns in simple stream yield back-references", "[backref] 
         REQUIRE(mockConsumer.receivedData);
 
         for (u8 byte : pattern) {
-            const bitset oracle(byte);
+            const bitset oracle(LITERAL_BITS, byte);
             REQUIRE(oracle == mockConsumer.popNextDatum());
         }
 

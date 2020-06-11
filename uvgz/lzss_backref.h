@@ -10,6 +10,7 @@
 
 const unsigned int LITERAL_BITS = 8;
 const unsigned int LENGTH_BASE_BITS = 9;
+const unsigned int DISTANCE_BASE_BITS = 5;
 
 /**
  * Elements are of the form {base length code, offset bits, range start, range end}
@@ -173,7 +174,7 @@ inline std::pair<bitset, bitset> getDistanceBackref(unsigned int distance) {
     const auto cell = distanceCodeTable[i];
 
     const auto baseSymbol = cell[0];
-    const auto base = getMinBitset(baseSymbol); // todo could tweak this to trade time for memory on large distances
+    const bitset base(DISTANCE_BASE_BITS, baseSymbol);
 
     const auto offsetMagnitude = distance - cell[2];
     const int offsetBits = cell[1];

@@ -6,45 +6,6 @@
 #include <boost/circular_buffer.hpp>
 #include "lzss_backref.h"
 
-
-/**
- * A ring buffer implementation to be used by the LZSS encoder to store history
- * and lookahead data.
- */
-class LzssBuffer {
-public:
-    typedef signed int buffer_index_t;
-
-    const int LOOKAHEAD_SIZE = 258;
-    const int HISTORY_SIZE = 32768;
-    const int TOTAL_BUFF_SIZE = LOOKAHEAD_SIZE + HISTORY_SIZE; // todo is this right?
-
-    LzssBuffer() {
-        this->ringBuff = buff_t (TOTAL_BUFF_SIZE);
-    }
-
-//     /**
-//      *  Get the bytes from start (inclusive) to end (exclusive).
-//      *
-//      * @return a std::array of bytes.
-//      */
-//      void get(buffer_index_t start, buffer_index_t end);
-// //    std::array<u8> get(int start, int end);
-
-
-// //    u8 get(int i);
-
-// //    u8 peekNext()
-
-private:
-    typedef boost::circular_buffer<bitset> buff_t;
-    buff_t ringBuff;
-
-    //     // todo might be easiest to wrap domain-specific functions around some standard implementation like
-    //     //      boost::circular_buffer
-};
-
-
 /**
  * Encodes a byte stream as a sequence of literals and (length, distance) pairs
  * called "back-references" according to the LZSS algorithm.
@@ -72,40 +33,55 @@ private:
  */
 class LzssEncoder {
 public:
+
     // Type of the downstream entity required. Likely a callback to the object
     // giving input data.
-    typedef std::function< void(bitset) > bitset_consumer_t;
+    typedef std::function< void(bitset) > symbol_consumer_t;
+
+    // todo consider increasing these
+    static const int LOOKAHEAD_CAPACITY = 100u; // not the maximum allowed value of 258
+    static const int HISTORY_CAPACITY = 1000u; // not the maximum allowed value of 32768
 
     /**
      * Constructs a new encoder.
      *
-     * @param acceptSymbol The function called when output symbols must be written downstream. This happens when the
-     * buffer is full and input is received, or when flush() is called.
+     * @param writeSymbol The function called when output symbols must be
+     * written downstream. This happens when the buffer is full and input is
+     * received, or when flush() is called.
      */
-    explicit LzssEncoder(bitset_consumer_t &acceptBitset) : acceptBitset(acceptBitset) {
+    explicit LzssEncoder(symbol_consumer_t& writeSymbol): writeSymbol(writeSymbol) {
+        this->lookahead = buff_t (LOOKAHEAD_CAPACITY);
+        this->history = buff_t (HISTORY_CAPACITY);
     }
 
     /**
      * Accepts a single byte in. This may or may not result in a symbol or
      * symbols being output.
      */
-    void acceptByte(u8 byte);
+    void acceptByte(u8 item);
 
     /**
-     * Any unprocessed input sitting in the lookahead buffer is processed and
-     * all encoded data is guaranteed to be output after this call.
+     * Processes any content in the lookahead buffer. The lookahead will be
+     * empty after this call.
      */
     void flush();
 
     /**
-     * todo
+     * Encodes at least the first character in the lookahead buffer. More
+     * than one character from the lookahead may be encoded by a single call.
      */
-    // ~LzssEncoder(); // todo needed?
-private:
-    // todo add buffer - need to be able to shift it over as we go
-    //      Ring buffer?
-    LzssBuffer buffer;
-    bitset_consumer_t& acceptBitset;
-};
+    void encodeFromLookahead();
 
+private:
+    typedef boost::circular_buffer<u8> buff_t;
+    buff_t history;
+    buff_t lookahead;
+
+    symbol_consumer_t& writeSymbol;
+
+    u8 popLookahead();
+
+    void outputLiteral(u8 literalValue);
+
+};
 #endif // UVGZ_LZSS_H
