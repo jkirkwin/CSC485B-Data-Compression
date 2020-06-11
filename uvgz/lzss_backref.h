@@ -8,9 +8,9 @@
 #include <cassert>
 #include "shared/binary.h"
 
-const unsigned int LITERAL_BITS = 8;
-const unsigned int LENGTH_BASE_BITS = 9;
-const unsigned int DISTANCE_BASE_BITS = 5;
+const unsigned int LITERAL_BITS = 8u;
+const unsigned int LENGTH_BASE_BITS = 9u;
+const unsigned int DISTANCE_BASE_BITS = 5u;
 
 /**
  * Elements are of the form {base length code, offset bits, range start, range end}

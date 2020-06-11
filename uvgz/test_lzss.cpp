@@ -132,7 +132,7 @@ TEST_CASE("Backref length conversions are correct", "[lzss] [backref]") {
 TEST_CASE("Backref distance conversions are correct", "[lzss] [backref]") {
     SECTION("Min distance") {
         const auto dist = 1;
-        const bitset baseSymbol(1u, 0);
+        const bitset baseSymbol(DISTANCE_BASE_BITS, 0);
         const bitset offsetSymbol;
 
         SECTION("convert symbols -> length") {
