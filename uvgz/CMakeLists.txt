@@ -15,7 +15,20 @@ set(LZSS_TEST ${LZSS_SRC} test_lzss.cpp)
 add_executable(test_lzss ${LZSS_TEST})
 target_link_libraries(test_lzss lzss_lib)
 
-set(SOURCE_FILES uvgz.cpp)
+###
+# Prefix Coding
+###
+# TODO add sources and tests
 
-# Add executable target
-add_executable(uvgz ${SOURCE_FILES})
+###
+# Gzip
+###
+set(GZIP_SRC gzip.cpp gzip.h CRC.h)
+add_library(gzip_lib STATIC ${GZIP_SRC})
+# TODO add testing target
+
+###
+# Main
+###
+add_executable(uvgz main.cpp)
+# todo link libraries as needed

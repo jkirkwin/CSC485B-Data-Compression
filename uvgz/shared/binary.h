@@ -15,4 +15,7 @@ using u8 = std::uint8_t;
 using u16 = std::uint16_t;
 using u32 = std::uint32_t;
 
+constexpr u16 kb = (1u << 10u);
+constexpr u32 mb = (1u << 20u);
+
 #endif //UVGZ_BINARY_H

@@ -7,20 +7,15 @@
    B. Bird - 05/13/2020
 */
 #include <iostream>
-#include <vector>
 #include <array>
-#include <unordered_map>
-#include <string>
-#include "output_stream.hpp"
-#include "deflate.h"
-#include "gzip.h"
+#include "shared/output_stream.hpp"
 
 // To compute CRC32 values, we can use this library
 // from https://github.com/d-bahr/CRCpp
 #define CRCPP_USE_CPP11
 #include "CRC.h"
 
-void push_gzip_header(OutputBitStream& stream) {
+void pushGzipHeader(OutputBitStream& stream) {
     stream.push_bytes( 0x1f, 0x8b, //Magic Number
                        0x08, //Compression (0x08 = DEFLATE)
                        0x00, //Flags
@@ -30,6 +25,12 @@ void push_gzip_header(OutputBitStream& stream) {
     );
 }
 
+void pushGzipFooter(OutputBitStream& stream, u32 crc, unsigned long inputSize) {
+    stream.push_u32(crc);
+    stream.push_u32(inputSize);
+}
+
+// todo Move the useful logic from here into gzip.cpp/h and make this a simple runner
 int main() {
 
     //See output_stream.hpp for a description of the OutputBitStream class
@@ -39,7 +40,7 @@ int main() {
     auto crc_table = CRC::CRC_32().MakeTable();
 
     //Push a basic gzip header
-    push_gzip_header(stream);
+    pushGzipHeader(stream);
 
 
     //This starter implementation writes a series of blocks with type 0 (store only)
@@ -114,8 +115,7 @@ int main() {
     }
 
     //Now close out the bitstream by writing the CRC and the total number of bytes stored.
-    stream.push_u32(crc);
-    stream.push_u32(bytes_read);
+    pushGzipFooter(stream, crc, bytes_read);
 
     return 0;
 }
