@@ -18,14 +18,17 @@ target_link_libraries(test_lzss lzss_lib)
 ###
 # Prefix Coding
 ###
-# TODO add sources and tests
+set(PREFIX_SRC prefix.h)
+# TODO add implementation and tests
 
 ###
 # Gzip
 ###
-set(GZIP_SRC gzip.cpp gzip.h CRC.h)
-add_library(gzip_lib STATIC ${GZIP_SRC})
+set(GZIP_SRC gzip.cpp gzip.h)
+set(GZIP_INCLUDE CRC.h shared/output_stream.hpp shared/binary.h)
+add_library(gzip_lib STATIC ${GZIP_SRC} ${GZIP_INCLUDE})
 # TODO add testing target
+# TODO link lzss and prefix libs
 
 ###
 # Main

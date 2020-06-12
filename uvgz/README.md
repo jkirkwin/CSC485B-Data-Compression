@@ -13,9 +13,8 @@ optimizations can be refactored in.
 
 ## Dir Structure
 Concerns are roughly broken up into:
-* GZip file and member structure -> `uvgz.cpp`
-* LZSS Encoding -> `lzss.h`
-* DEFLATE block creation -> `deflate.h`
+* GZip file, member, and block structure -> `gzip.cpp/h`
+* LZSS Encoding -> `lzss.cpp/h`, `lzss_backref.h`
 * Prefix coding -> `prefix.h`
 
 ## Deflate Compression Decisions
