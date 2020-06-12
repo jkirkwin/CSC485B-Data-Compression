@@ -115,6 +115,7 @@ inline std::pair<bitset, bitset> getLengthBackref(unsigned int length) {
 
     // todo this could be sped up
     // todo factor this out so its easier to optimize later
+    //      Could create a lookup table (constexpr) to make this constant time
     // linear search for the length
 
     int i;
