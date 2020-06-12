@@ -1,4 +1,5 @@
 #include "gzip.h"
+#include "prefix.h"
 
 void GzipEncoder::encode(std::istream& inStream) {
     pushHeader();
