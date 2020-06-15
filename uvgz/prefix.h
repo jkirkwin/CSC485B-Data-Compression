@@ -2,6 +2,7 @@
 #define UVGZ_PREFIX_H
 
 #include <vector>
+#include "shared/binary.h"
 
 // length code type 1:
 // 0-143 -> 8 bits
@@ -55,19 +56,15 @@ std::vector<u32> getFixedDistanceCodeLengths() {
     return lengths;
 }
 
-/** Provided by Bill.
+
+/** Adapted from Bill's provided code.
  *
  * Given a vector of lengths where lengths.at(i) is the code length for symbol
- * i, returns a vector V of unsigned int values, such that the lower
- * lengths.at(i) bits of V.at(i) comprise the bit encoding for symbol i (using
- * the encoding construction given in RFC 1951).
- *
- * Note that the encoding is in MSB -> LSB order (that is, the first bit of the
- * prefix code is bit number lengths.at(i) - 1 and the last bit is bit number 0).
+ * i, returns a vector of codewords with the given lengths.
  *
  * The codes for symbols with length zero are undefined.
  */
-std::vector< u32 > constructCanonicalCode( std::vector<u32> const & lengths ){
+std::vector< bitset > constructCanonicalCode( std::vector<u32> const & lengths ){
 
     unsigned int size = lengths.size();
     std::vector< unsigned int > length_counts(16,0); //Lengths must be less than 16 for DEFLATE
@@ -79,7 +76,7 @@ std::vector< u32 > constructCanonicalCode( std::vector<u32> const & lengths ){
     }
     length_counts[0] = 0; //Disregard any codes with alleged zero length
 
-    std::vector< u32 > result_codes(size,0);
+    std::vector< bitset > result_codes(size);
 
     //The algorithm below follows the pseudocode in RFC 1951
     std::vector< unsigned int > next_code(size,0);
@@ -97,7 +94,7 @@ std::vector< u32 > constructCanonicalCode( std::vector<u32> const & lengths ){
         for(unsigned int symbol = 0; symbol < size; symbol++){
             unsigned int length = lengths.at(symbol);
             if (length > 0) {
-                result_codes.at(symbol) = next_code.at(length)++;
+                result_codes.at(symbol) = bitset(length, next_code.at(length)++);
             }
         }
     }
@@ -108,7 +105,7 @@ std::vector< u32 > constructCanonicalCode( std::vector<u32> const & lengths ){
  * @return A vector of code words for the fixed type 1 LL code in the format
  * specified by constructCanonicalCode().
  */
-std::vector<u32> getFixedLLCode() {
+std::vector<bitset> getFixedLLCode() {
     return constructCanonicalCode(getFixedLLCodeLengths());
 }
 
@@ -116,7 +113,7 @@ std::vector<u32> getFixedLLCode() {
  * @return A vector of code words for the fixed type 1 distance code in the
  * format specified by constructCanonicalCode().
  */
-std::vector<u32> getFixedDistanceCode() {
+std::vector<bitset> getFixedDistanceCode() {
     return constructCanonicalCode(getFixedDistanceCodeLengths());
 }
 

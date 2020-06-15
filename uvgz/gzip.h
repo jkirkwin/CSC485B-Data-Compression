@@ -4,6 +4,7 @@
 #include "shared/binary.h"
 #include "shared/output_stream.hpp"
 #include "CRC.h"
+#include "lzss.h"
 
 class GzipEncoder {
 public:
@@ -19,20 +20,23 @@ public:
     /**
      * Encode the contents of the given istream.
      */
-    void encode(std::istream& inStream);
+    void encode(std::istream& inStream=std::cin);
 
 private:
     typedef CRC::Table<crcpp_uint32, 32> crc_table_t;
     const crc_table_t crcTable = crc_table_t(CRC::CRC_32()); // table used to increase speed
-    crcpp_uint32 crc = 0; // The running CRC32 value
+    u32 crc = 0; // The running CRC32 value
     u32 inputSize = 0; // Running counter
     OutputBitStream outBitStream;
 
     typedef std::vector<u8> chunk_t;
+    typedef std::vector<bitset> bitset_vec_t;
     static chunk_t readChunk(std::istream& inStream, u32 chunkSize=mb);
-    void processChunk(chunk_t& data);
+    void sendBlock(int type, chunk_t& data, bool last=false);
+    void outputLzssSymbols(const bitset_vec_t&, const bitset_vec_t&, const bitset_vec_t&);
     void updateFooterValues(chunk_t& chunk);
 
+    void pushMsbFirst(const bitset& bits);
     void pushHeader();
     void pushFooter();
 };

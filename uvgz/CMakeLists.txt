@@ -19,7 +19,9 @@ target_link_libraries(test_lzss lzss_lib)
 # Prefix Coding
 ###
 set(PREFIX_SRC prefix.h)
-# TODO add implementation and tests
+set(PREFIX_TEST ${PREFIX_SRC} test_prefix.cpp)
+add_executable(test_prefix ${PREFIX_TEST})
+# TODO make this a static lib?
 
 ###
 # Gzip
@@ -27,11 +29,15 @@ set(PREFIX_SRC prefix.h)
 set(GZIP_SRC gzip.cpp gzip.h)
 set(GZIP_INCLUDE CRC.h shared/output_stream.hpp shared/binary.h)
 add_library(gzip_lib STATIC ${GZIP_SRC} ${GZIP_INCLUDE})
-# TODO add testing target
-# TODO link lzss and prefix libs
+target_link_libraries(gzip_lib lzss_lib)
+
+set(GZIP_TEST ${GZIP_SRC} ${GZIP_INCLUDE} test_gzip.cpp)
+add_executable(test_gzip ${GZIP_TEST})
+target_link_libraries(test_gzip gzip_lib)
 
 ###
 # Main
 ###
 add_executable(uvgz main.cpp)
+target_link_libraries(uvgz gzip_lib)
 # todo link libraries as needed

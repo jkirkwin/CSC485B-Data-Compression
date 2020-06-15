@@ -8,7 +8,9 @@
 */
 #include <iostream>
 #include <array>
+#include <fstream>
 #include "shared/output_stream.hpp"
+#include "gzip.h"
 
 // To compute CRC32 values, we can use this library
 // from https://github.com/d-bahr/CRCpp
@@ -32,6 +34,19 @@ void pushGzipFooter(OutputBitStream& stream, u32 crc, unsigned long inputSize) {
 
 // todo Move the useful logic from here into gzip.cpp/h and make this a simple runner
 int main() {
+    GzipEncoder gzipEncoder;
+    const bool useStdin = true;
+    if (useStdin) {
+        gzipEncoder.encode();
+    }
+    else {
+        const auto filename = "/home/kirkwij/csc485b/CSC485B-Data-Compression/uvgz/catch/catch.hpp";
+        std::ifstream inStream(filename);
+        gzipEncoder.encode(inStream);
+    }
+}
+
+int runProvidedCode() {
 
     //See output_stream.hpp for a description of the OutputBitStream class
     OutputBitStream stream {std::cout};
