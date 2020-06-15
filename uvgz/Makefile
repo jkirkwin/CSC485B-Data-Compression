@@ -5,12 +5,28 @@ CFLAGS=-O3 -Wall -std=c11 $(EXTRA_CFLAGS)
 CXX=g++
 CC=$(CXX) # Hack to allow implicit rules to link with g++
 
-TEST_BINARIES=test_lzss
+TEST_BINARIES=
 BINARIES=$(TEST_BINARIES) uvgz
 
-# TODO build LZSS
+all: main
+
+###
+# LZSS
+###
+lzss.o: lzss.cpp lzss.h lzss_backref.h shared/binary.h
+
+###
+# GZip
+###
+gzip.o: gzip.cpp gzip.h lzss.o shared/output_stream.hpp prefix.h
+
+###
+# Main
+###
+main: main.cpp gzip.o
+	$(CXX) -c $(CXXFLAGS) main.cpp
+	$(CXX) -o uvgz $(CXXFLAGS) main.o gzip.o lzss.o
 
 clean:
 	rm -f *.o $(BINARIES)
 
-# all: uvgz

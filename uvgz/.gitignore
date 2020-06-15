@@ -3,3 +3,4 @@ gzstat/
 gzip_reference
 cmake-build-debug/
 catch/
+uvgz
