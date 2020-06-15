@@ -2,6 +2,7 @@
 #define UVGZ_LZSS_H
 
 #include <iostream>
+#include <functional>
 #include "shared/binary.h"
 #include <boost/circular_buffer.hpp>
 #include "lzss_backref.h"
