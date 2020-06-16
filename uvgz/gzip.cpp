@@ -13,7 +13,7 @@ void GzipEncoder::encode(std::istream& inStream) {
     while(! currentBlock.empty()) {
         bool last = nextBlock.empty();
         updateFooterValues(currentBlock);
-        sendBlock(0, currentBlock, last);
+        sendBlock(1, currentBlock, last);
 
         currentBlock = nextBlock; // todo use reference types here to speed things up?
         nextBlock = readChunk(inStream, chunkSize);
@@ -181,8 +181,9 @@ void GzipEncoder::pushFooter() {
 }
 
 void GzipEncoder::pushMsbFirst(const bitset &bits) {
-    for(unsigned long i = bits.size() - 1; i >= 0; --i) {
-        this->outBitStream.push_bit(bits[i]);
+    const auto numBits = bits.size();
+    for(unsigned long i = 0; i < numBits; ++i) {
+        this->outBitStream.push_bit(bits[numBits - i - 1]);
     }
 }
 
