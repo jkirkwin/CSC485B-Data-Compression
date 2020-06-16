@@ -9,6 +9,9 @@
     might be frowned upon under some style manuals)
 
    B. Bird - 05/13/2020
+
+
+   Modified by J. Kirkwin - 06/16/2020
 */ 
 
 #ifndef OUTPUT_STREAM_HPP
@@ -58,6 +61,12 @@ public:
     /* Push a 16 bit unsigned short value (LSB first) */
     void push_u16(u16 i){
         push_bits(i,16);
+    }
+
+    /* Push the given bits from least to most significant.
+     */
+    void push_bits(const bitset& b) {
+        push_bits(b.to_ulong(), b.size());
     }
 
     /* Push the lowest order num_bits bits from b into the stream

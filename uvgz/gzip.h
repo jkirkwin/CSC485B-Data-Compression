@@ -9,6 +9,8 @@
 class GzipEncoder {
 public:
 
+    const u32 MAX_TYPE_0_SIZE = (1u << 16u) - 1;
+
     /**
      * Creates a new GZip encoder that will write to the given ostream when
      * run() is called.
@@ -25,20 +27,23 @@ public:
 private:
     typedef CRC::Table<crcpp_uint32, 32> crc_table_t;
     const crc_table_t crcTable = crc_table_t(CRC::CRC_32()); // table used to increase speed
-    u32 crc = 0; // The running CRC32 value
+    u32 crc = 0; // Running CRC32 value
     u32 inputSize = 0; // Running counter
     OutputBitStream outBitStream;
 
     typedef std::vector<u8> chunk_t;
-    typedef std::vector<bitset> bitset_vec_t;
     static chunk_t readChunk(std::istream& inStream, u32 chunkSize=mb);
-    void sendBlock(int type, chunk_t& data, bool last=false);
-    void outputLzssSymbols(const bitset_vec_t&, const bitset_vec_t&, const bitset_vec_t&);
+
+    void processInput(std::istream& inStream);
+    void sendBlocks(std::vector<u8> & rawData, std::vector<bitset> & lzssData, bool endOfData);
+    void sendBlockType0(std::vector<u8> &data, bool last);
+    void sendBlockType1(std::vector<bitset> &lzssData, bool last);
+
     void updateFooterValues(chunk_t& chunk);
 
-    void pushMsbFirst(const bitset& bits);
     void pushHeader();
     void pushFooter();
+    void pushMsbFirst(const bitset& bits);
 };
 
 #endif //UVGZ_GZIP_H

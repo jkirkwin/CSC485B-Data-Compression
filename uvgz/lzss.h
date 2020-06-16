@@ -55,11 +55,24 @@ public:
         this->history = buff_t (HISTORY_CAPACITY);
     }
 
+    ~LzssEncoder() {
+        flush();
+    }
+
     /**
      * Accepts a single byte in. This may or may not result in a symbol or
      * symbols being output.
      */
     void acceptByte(u8 item);
+
+    /**
+     * Convenience member function to pass in multiple bytes at once.
+     */
+    void acceptData(const std::vector<u8> & bytes) {
+        for(const auto byte : bytes) {
+            acceptByte(byte);
+        }
+    }
 
     /**
      * Processes any content in the lookahead buffer. The lookahead will be
@@ -72,6 +85,11 @@ public:
      * than one character from the lookahead may be encoded by a single call.
      */
     void encodeFromLookahead();
+
+    /**
+     * Discard any existing history and pending input.
+     */
+    void reset();
 
 private:
     typedef boost::circular_buffer<u8> buff_t;

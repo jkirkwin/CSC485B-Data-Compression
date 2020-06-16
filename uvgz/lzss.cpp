@@ -31,3 +31,8 @@ u8 LzssEncoder::popLookahead() {
         lookahead.pop_front();
         return front;
 }
+
+void LzssEncoder::reset() {
+    this->history.clear();
+    this->lookahead.clear();
+}

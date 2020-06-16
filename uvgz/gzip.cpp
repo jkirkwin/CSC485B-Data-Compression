@@ -5,26 +5,125 @@
 
 void GzipEncoder::encode(std::istream& inStream) {
     pushHeader();
-
-    // read chunks of data until input is empty.
-    const auto chunkSize = kb; // todo reading a kilobyte at a time.
-    auto currentBlock = readChunk(inStream, chunkSize);
-    auto nextBlock = readChunk(inStream, chunkSize);
-    while(! currentBlock.empty()) {
-        bool last = nextBlock.empty();
-        updateFooterValues(currentBlock);
-        sendBlock(1, currentBlock, last);
-
-        currentBlock = nextBlock; // todo use reference types here to speed things up?
-        nextBlock = readChunk(inStream, chunkSize);
-    }
-
+    processInput(inStream);
     pushFooter();
 }
 
+void GzipEncoder::processInput(std::istream& inStream) {
+    // Repeatedly read an arbitrarily sized chunk of input data and run it
+    // through LZSS. Determine the block type to use based on the result.
+
+    const auto inputChunkSize = kb; // todo only reading a kilobyte at a time for now
+
+    // Create Lzss output buffer and encoder
+    const auto buffSize = inputChunkSize * 2; // Ensure we have enough room in case of expansion.
+    std::vector<bitset> lzssOutputBuffer(buffSize);
+    LzssEncoder::symbol_consumer_t symbolConsumer = [&](const bitset& symbol) {
+        lzssOutputBuffer.push_back(symbol);
+    };
+    LzssEncoder lzssEncoder(symbolConsumer);
+
+    // Start reading chunks
+    auto currentChunk = readChunk(inStream, inputChunkSize);
+    auto nextChunk = readChunk(inStream, inputChunkSize);
+    while(! currentChunk.empty()) {
+        // Run the chunk through LZSS
+        lzssOutputBuffer.clear();
+        lzssEncoder.acceptData(currentChunk);
+
+        // Send the data
+        bool last = nextChunk.empty();
+        updateFooterValues(currentChunk);
+        if (last) {
+            lzssEncoder.flush();
+        }
+        sendBlocks(currentChunk, lzssOutputBuffer, last);
+
+        // Update markers
+        currentChunk = nextChunk; // todo use reference types here to speed things up?
+        nextChunk = readChunk(inStream, inputChunkSize);
+    }
+}
+
+void GzipEncoder::sendBlocks(std::vector<u8> &rawData, std::vector<bitset> &lzssData, bool endOfData) {
+    // todo choose block types based on lzss results
+    //    sendBlockType0(rawData, endOfData);
+    sendBlockType1(lzssData, endOfData);
+}
+
+void GzipEncoder::sendBlockType0(std::vector<u8> &data, bool last) {
+    assert(data.size() < MAX_TYPE_0_SIZE);
+
+    // header fields
+    const auto isLast = last ? 1 : 0;
+    this->outBitStream.push_bit(isLast);
+    const auto type = 0;
+    this->outBitStream.push_bits(type, 2);
+
+    // pad to byte boundary
+    this->outBitStream.flush_to_byte();
+
+    // len and ~len
+    auto len = data.size();
+    assert (len < MAX_TYPE_0_SIZE);
+    this->outBitStream.push_u16(len);
+    this->outBitStream.push_u16(~len);
+
+    // content
+    for (const auto byte : data) {
+        this->outBitStream.push_byte(byte);
+    }
+}
+
+void GzipEncoder::sendBlockType1(std::vector<bitset> &lzssData, bool last) {
+    // header fields
+    const auto isLast = last ? 1 : 0;
+    this->outBitStream.push_bit(isLast);
+    const auto type = 1;
+    this->outBitStream.push_bits(type, 2);
+
+    // content
+    const auto llCode = getFixedLLCode();
+    const auto distCode = getFixedDistanceCode();
+    for (int i = 0; i < lzssData.size(); ++i) {
+        const auto symbol = lzssData.at(i);
+        if (symbol.size() == LITERAL_BITS) {  // Literal
+            const auto codeWord = llCode.at(symbol.to_ulong());
+            pushMsbFirst(codeWord);
+        }
+        else {  // Backreference
+
+            assert (false); // todo lzss backrefs unimplemented.
+
+            const auto &lenBaseSymbol = symbol; // Reference to avoid copy
+            const auto lenOffsetSymbol = lzssData.at(++i);
+            const auto distBaseSymbol = lzssData.at(++i);
+            const auto distOffsetSymbol = lzssData.at(++i);
+
+            const auto lenCodeWord = llCode.at(lenBaseSymbol.to_ulong());
+            const auto distCodeWord = distCode.at(distBaseSymbol.to_ulong());
+
+            // Note that rule #1 applies to the offsets but not the prefix code words.
+            pushMsbFirst(lenCodeWord);
+            this->outBitStream.push_bits(lenOffsetSymbol);
+            pushMsbFirst(distCodeWord);
+            this->outBitStream.push_bits(distOffsetSymbol);
+        }
+    }
+
+    // Insert the EOB marker. This is not sent through the LZSS scheme but must
+    // be encoded as if it were.
+    const auto eob = 256u;
+    const auto encodedEob = llCode.at(eob);
+    pushMsbFirst(encodedEob);
+}
+
+/*
+ * Reads from the given stream up to the given amount of data.
+ */
 GzipEncoder::chunk_t GzipEncoder::readChunk(std::istream& inStream, u32 chunkSize) {
     char nextChar {};
-    std::vector<u8> chunk {};
+    std::vector<u8> chunk(chunkSize);
 
     for (int i = 0; i < chunkSize; i++) {
         if (inStream.get(nextChar)) {
@@ -34,7 +133,6 @@ GzipEncoder::chunk_t GzipEncoder::readChunk(std::istream& inStream, u32 chunkSiz
             break;
         }
     }
-
     return chunk;
 }
 
@@ -57,103 +155,6 @@ void GzipEncoder::updateFooterValues(chunk_t &chunk) {
     }
 
     this->inputSize += chunk.size();
-}
-
-/**
- * Creats and LzssEncoder that writes output to the given buffer.
- * @param outBuffer The buffer to be written to. It is assumed that this buffer
- * is large enough to accommodate the entire output of the encoder.
- */
-LzssEncoder getLzssEncoder(std::vector<bitset>& outBuffer) {
-    LzssEncoder::symbol_consumer_t forward = [&outBuffer](const bitset& b) {
-        outBuffer.push_back(b);
-    };
-    return LzssEncoder(forward);
-}
-
-/**
- * Creates an LzssEncoder and runs it on the given input data.
- * @return The resulting sequence of LZSS symbols.
- */
-std::vector<bitset> runLzss(const std::vector<u8>& input) {
-    std::vector<bitset> lzssOutputBuffer {};
-    lzssOutputBuffer.reserve(input.size()); // Hopefully the input won't expand. todo consider scaling this up
-    auto lzssEncoder = getLzssEncoder(lzssOutputBuffer);
-
-    for(const auto byte : input) {
-        lzssEncoder.acceptByte(byte);
-    }
-    return lzssOutputBuffer;
-}
-
-/**
- * Does not output the EOB symbol.
- * @param symbols The LZSS Symbols to be encoded and output
- * @param llCode The length-literal prefix code backreferences
- * @param distanceCode The distance prefix code for backreferences
- */
-void GzipEncoder::outputLzssSymbols(const std::vector<bitset>& symbols,
-                                    const std::vector<bitset>& llCode,
-                                    const std::vector<bitset>& distanceCode) {
-    // todo this assumes block type 1
-
-    for(int i = 0; i < symbols.size(); ++i) {
-        const auto symbol = symbols.at(i);
-        if (symbol.size() != LITERAL_BITS) {
-            // Beginning of a backreference
-            assert(false); // we shouldn't be getting here yet.
-            // todo this LITERAL_BITS comparison is problematic because 256 is actually considered a literal and would
-            //      require 256 bits. If we assume that 256 is not in the input, then it could manually be sent later?
-        }
-        else {
-            // Literal
-            auto literalValue = symbol.to_ulong();
-            auto encoded = llCode.at(literalValue);
-            pushMsbFirst(encoded);
-        }
-    }
-}
-
-void GzipEncoder::sendBlock(int type, chunk_t &data, bool last) {
-    // todo we're creating a new LzssEncoder for each chunk. Should just use one. Make it a member.
-
-    // header fields
-    const auto isLast = last ? 1 : 0;
-    this->outBitStream.push_bit(isLast);
-    this->outBitStream.push_bits(type, 2);
-
-    if (type == 0) {
-        // pad to byte boundary
-        this->outBitStream.flush_to_byte();
-
-        // len and ~len
-        auto len = data.size();
-        assert (len <= (1u << 16u)); // todo this is failing.
-        this->outBitStream.push_u16(len);
-        this->outBitStream.push_u16(~len);
-
-        // content
-        for (const auto byte : data) {
-            this->outBitStream.push_byte(byte);
-        }
-    }
-    else if(type == 1) {    // LZSS
-        const auto llCode = getFixedLLCode();
-        const auto distanceCode = getFixedDistanceCode();
-        const auto lzssOutput = runLzss(data);
-        outputLzssSymbols(lzssOutput, llCode, distanceCode);
-
-        // Insert the EOB marker. This is not sent through the LZSS scheme but must be encoded as if it were.
-        const auto eob = 256u;
-        const auto encodedEob = llCode.at(eob);
-        pushMsbFirst(encodedEob);
-        // todo confirm that LZSS should not account for the EOB in its backreference calculations.
-        //      Otherwise we will need to refactor.
-    }
-    else {
-        assert(false);
-        // todo block type 2 unimplemented
-    }
 }
 
 /*
@@ -186,4 +187,3 @@ void GzipEncoder::pushMsbFirst(const bitset &bits) {
         this->outBitStream.push_bit(bits[numBits - i - 1]);
     }
 }
-
