@@ -91,15 +91,15 @@ const std::array<std::array<unsigned int, 4>, 30> distanceCodeTable {{
  * @return The length of the reference.
  */
 inline unsigned int getBackrefLength(const bitset& baseSymbol, const bitset& offsetSymbol) {
-    const auto minSymbol = lengthCodeTable[0][0];
+    const auto minSymbol = lengthCodeTable.at(0).at(0);
     assert (baseSymbol.to_ulong() >= minSymbol);
 
     const auto index = baseSymbol.to_ulong() - minSymbol;
-    const auto tableEntry = lengthCodeTable[index];
-    const auto baseValue = tableEntry[2];
+    const auto tableEntry = lengthCodeTable.at(index);
+    const auto baseValue = tableEntry.at(2);
 
     const auto offsetValue = offsetSymbol.to_ulong();
-    const auto maxPossibleOffset = (1u << tableEntry[1]) - 1;
+    const auto maxPossibleOffset = (1u << tableEntry.at(1)) - 1;
     assert (offsetValue <= maxPossibleOffset);
 
     return baseValue + offsetValue;
@@ -110,7 +110,7 @@ inline unsigned int getBackrefLength(const bitset& baseSymbol, const bitset& off
  */
 inline std::pair<bitset, bitset> getLengthBackref(unsigned int length) {
     assert (length >= 0);
-    auto const maxLen = lengthCodeTable[lengthCodeTable.size() - 1][3];
+    auto const maxLen = lengthCodeTable.at(lengthCodeTable.size() - 1).at(3);
     assert (length <= maxLen);
 
     // todo this could be sped up
@@ -120,16 +120,16 @@ inline std::pair<bitset, bitset> getLengthBackref(unsigned int length) {
 
     int i;
     for (i = 0; i < lengthCodeTable.size(); ++i) {
-        const auto cell = lengthCodeTable[i];
-        if (cell[3] >= length) {
+        const auto cell = lengthCodeTable.at(i);
+        if (cell.at(3) >= length) {
             break;
         }
     }
 
-    const auto cell = lengthCodeTable[i];
-    const bitset base(LENGTH_BASE_BITS, cell[0]);
-    const auto offsetMagnitude = length - cell[2];
-    const int offsetBits = cell[1];
+    const auto cell = lengthCodeTable.at(i);
+    const bitset base(LENGTH_BASE_BITS, cell.at(0));
+    const auto offsetMagnitude = length - cell.at(2);
+    const int offsetBits = cell.at(1);
     const bitset offset(offsetBits, offsetMagnitude);
     return std::make_pair(base, offset);
 }
@@ -141,15 +141,15 @@ inline std::pair<bitset, bitset> getLengthBackref(unsigned int length) {
  * @return The total distance encoded in the two bitsets.
  */
 inline unsigned int getBackrefDistance(const bitset& baseSymbol, const bitset& offsetSymbol) {
-    const auto minSymbol = distanceCodeTable[0][0];
+    const auto minSymbol = distanceCodeTable.at(0).at(0);
     assert (baseSymbol.to_ulong() >= minSymbol);
 
     const auto index = baseSymbol.to_ulong() - minSymbol;
-    const auto tableEntry = distanceCodeTable[index];
-    const auto baseValue = tableEntry[2];
+    const auto tableEntry = distanceCodeTable.at(index);
+    const auto baseValue = tableEntry.at(2);
 
     const auto offsetValue = offsetSymbol.to_ulong();
-    const auto maxPossibleOffset = (1u << tableEntry[1]) - 1;
+    const auto maxPossibleOffset = (1u << tableEntry.at(1)) - 1;
     assert (offsetValue <= maxPossibleOffset);
 
     return baseValue + offsetValue;
@@ -157,7 +157,7 @@ inline unsigned int getBackrefDistance(const bitset& baseSymbol, const bitset& o
 
 inline std::pair<bitset, bitset> getDistanceBackref(unsigned int distance) {
     assert (distance >= 1);
-    auto const maxDistance = distanceCodeTable[distanceCodeTable.size() - 1][3];
+    auto const maxDistance = distanceCodeTable.at(distanceCodeTable.size() - 1).at(3);
     assert (distance <= maxDistance);
 
     // todo this could be sped up
@@ -166,19 +166,19 @@ inline std::pair<bitset, bitset> getDistanceBackref(unsigned int distance) {
 
     int i;
     for (i = 0; i < distanceCodeTable.size(); ++i) {
-        const auto cell = distanceCodeTable[i];
-        if (cell[3] >= distance) {
+        const auto cell = distanceCodeTable.at(i);
+        if (cell.at(3) >= distance) {
             break;
         }
     }
 
-    const auto cell = distanceCodeTable[i];
+    const auto cell = distanceCodeTable.at(i);
 
-    const auto baseSymbol = cell[0];
+    const auto baseSymbol = cell.at(0);
     const bitset base(DISTANCE_BASE_BITS, baseSymbol);
 
-    const auto offsetMagnitude = distance - cell[2];
-    const int offsetBits = cell[1];
+    const auto offsetMagnitude = distance - cell.at(2);
+    const int offsetBits = cell.at(1);
     const bitset offset(offsetBits, offsetMagnitude);
 
     return std::make_pair(base, offset);

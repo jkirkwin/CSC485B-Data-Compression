@@ -25,14 +25,14 @@ std::vector<u32> getFixedLLCodeLengths() {
     std::vector<u32> lengths {};
 
     const auto entryCount = fixedLLCodeLengths.size();
-    const auto lastEntry = fixedLLCodeLengths[entryCount - 1];
-    const auto totalLengths = lastEntry[1] + 1;
+    const auto lastEntry = fixedLLCodeLengths.at(entryCount - 1);
+    const auto totalLengths = lastEntry.at(1) + 1;
     lengths.reserve(totalLengths);
 
     for (auto range : fixedLLCodeLengths) {
-        const auto rangeStart {range[0]};
-        const auto rangeEnd {range[1]};
-        const auto bits {range[2]};
+        const auto rangeStart {range.at(0)};
+        const auto rangeEnd {range.at(1)};
+        const auto bits {range.at(2)};
         for(int i = rangeStart; i <= rangeEnd; i++) {
             lengths.push_back(bits);
         }
@@ -74,7 +74,7 @@ std::vector< bitset > constructCanonicalCode( std::vector<u32> const & lengths )
         length_counts.at(i)++;
         max_length = std::max(i, max_length);
     }
-    length_counts[0] = 0; //Disregard any codes with alleged zero length
+    length_counts.at(0) = 0; //Disregard any codes with alleged zero length
 
     std::vector< bitset > result_codes(size);
 

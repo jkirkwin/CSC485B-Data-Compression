@@ -45,7 +45,7 @@ void GzipEncoder::updateFooterValues(chunk_t &chunk) {
     // CRC requires a void* parameter. Get the pointer to the first cell of the
     // chunk's internal array.
     // See: https://stackoverflow.com/questions/4289612/getting-array-from-stdvector
-    u8* chunkArray = &chunk[0];
+    u8* chunkArray = &chunk.at(0);
 
     if (this->inputSize == 0) {
         // Store initial CRC
@@ -98,7 +98,7 @@ void GzipEncoder::outputLzssSymbols(const std::vector<bitset>& symbols,
     // todo this assumes block type 1
 
     for(int i = 0; i < symbols.size(); ++i) {
-        const auto symbol = symbols[i];
+        const auto symbol = symbols.at(i);
         if (symbol.size() != LITERAL_BITS) {
             // Beginning of a backreference
             assert(false); // we shouldn't be getting here yet.
@@ -108,7 +108,7 @@ void GzipEncoder::outputLzssSymbols(const std::vector<bitset>& symbols,
         else {
             // Literal
             auto literalValue = symbol.to_ulong();
-            auto encoded = llCode[literalValue];
+            auto encoded = llCode.at(literalValue);
             pushMsbFirst(encoded);
         }
     }
@@ -117,7 +117,7 @@ void GzipEncoder::outputLzssSymbols(const std::vector<bitset>& symbols,
 void GzipEncoder::sendBlock(int type, chunk_t &data, bool last) {
     // todo we're creating a new LzssEncoder for each chunk. Should just use one. Make it a member.
 
-    // Block type 1 header fields
+    // header fields
     const auto isLast = last ? 1 : 0;
     this->outBitStream.push_bit(isLast);
     this->outBitStream.push_bits(type, 2);
@@ -181,7 +181,7 @@ void GzipEncoder::pushFooter() {
 }
 
 void GzipEncoder::pushMsbFirst(const bitset &bits) {
-    for(unsigned long i = bits.size() - 1; i > 0; --i) {
+    for(unsigned long i = bits.size() - 1; i >= 0; --i) {
         this->outBitStream.push_bit(bits[i]);
     }
 }

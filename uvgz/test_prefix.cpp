@@ -40,7 +40,7 @@ TEST_CASE("Fixed codes lengths are correct", "[prefix]  [type1]") {
 
         int i = 0;
         while (i < numSymbols) {
-            const auto len = llCodeLengths[i];
+            const auto len = llCodeLengths.at(i);
             if (i <= 143) {
                 REQUIRE(len == 8);
             }
