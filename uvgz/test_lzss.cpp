@@ -70,6 +70,20 @@ private:
 
 // todo add clion configuration to run all of these tests at once
 
+void requireEqualBackref(u32 len, u32 dist, MockDownstreamConsumer<bitset>& downstreamConsumer) {
+    REQUIRE(!downstreamConsumer.outputDepleted());
+    const auto lengthBase = downstreamConsumer.popNextDatum();
+    REQUIRE(!downstreamConsumer.outputDepleted());
+    const auto lengthOffset = downstreamConsumer.popNextDatum();
+    REQUIRE(!downstreamConsumer.outputDepleted());
+    const auto distanceBase = downstreamConsumer.popNextDatum();
+    REQUIRE(!downstreamConsumer.outputDepleted());
+    const auto distanceOffset = downstreamConsumer.popNextDatum();
+
+    REQUIRE(getBackrefLength(lengthBase, lengthOffset) == len);
+    REQUIRE(getBackrefDistance(distanceBase, distanceOffset) == dist);
+}
+
 TEST_CASE("Backref length conversions are correct", "[lzss] [backref]") {
     SECTION("Min length") {
         const auto length = 3;
@@ -223,16 +237,39 @@ TEST_CASE("Obvious patterns in simple stream yield back-references", "[backref] 
             REQUIRE(oracle == mockConsumer.popNextDatum());
         }
 
-        const auto lengthBase = mockConsumer.popNextDatum();
-        const auto lengthOffset = mockConsumer.popNextDatum();
-        const auto distanceBase = mockConsumer.popNextDatum();
-        const auto distanceOffset = mockConsumer.popNextDatum();
+        requireEqualBackref(pattern.length(), pattern.length(), mockConsumer);
         REQUIRE(mockConsumer.outputDepleted());
-
-        auto const lengthResult = getBackrefLength(lengthBase, lengthOffset);
-        auto const distanceResult = getBackrefDistance(distanceBase, distanceOffset);
-        REQUIRE(lengthResult == pattern.length());
-        REQUIRE(distanceResult == pattern.length());
     }
-    // todo add a second obvious backreference case
+    SECTION("RLE Sucessful") {
+        const u8 first = 0x0F;
+        const u8 repeated = 0xF0;
+        const int repeatCount = 15;
+        const u8 last = 0xFF;
+
+        encoder.acceptByte(first);
+        for(int i = 0; i < repeatCount; ++i) {
+            encoder.acceptByte(repeated);
+        }
+        encoder.acceptByte(last);
+        REQUIRE(! mockConsumer.receivedData);
+
+        encoder.flush();
+        REQUIRE(mockConsumer.receivedData);
+
+        auto firstResult = mockConsumer.popNextDatum();
+        REQUIRE(firstResult == bitset(LITERAL_BITS, first));
+
+        auto firstRepeated = mockConsumer.popNextDatum();
+        REQUIRE(firstRepeated == bitset(LITERAL_BITS, repeated));
+
+        // Now we should see one long backreference
+        const auto expectedLength = repeatCount - 1;
+        const auto expectedDistance = 1;
+        requireEqualBackref(expectedLength, expectedDistance, mockConsumer);
+
+        auto lastResult = mockConsumer.popNextDatum();
+        REQUIRE(lastResult == bitset(LITERAL_BITS, last));
+
+        REQUIRE(mockConsumer.outputDepleted());
+    }
 }
