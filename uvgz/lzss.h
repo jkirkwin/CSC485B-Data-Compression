@@ -99,8 +99,10 @@ private:
     symbol_consumer_t& writeSymbol;
 
     u8 popLookahead();
-
     void outputLiteral(u8 literalValue);
+    void outputBackref(u32 len, u32 dist);
+    std::pair<u32, u32> searchHistoryFor(std::vector<u8>& sequence);
+    bool isMatch(u32, u32);
 
 };
 #endif // UVGZ_LZSS_H

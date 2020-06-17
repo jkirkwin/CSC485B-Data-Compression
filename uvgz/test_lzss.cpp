@@ -206,11 +206,11 @@ TEST_CASE("Obvious patterns in simple stream yield back-references", "[backref] 
 
     SECTION("2 * 10 character pattern -> one backref") {
         const std::string pattern = "1234567890";
-        const int repeat = 2;
-        for(int i = 0; i < repeat; i++) {
-            for (u8 byte : pattern) {
-                encoder.acceptByte(byte);
-            }
+        for (u8 byte : pattern) {
+            encoder.acceptByte(byte);
+        }
+        for (u8 byte : pattern) {
+            encoder.acceptByte(byte);
         }
         REQUIRE(!mockConsumer.receivedData);
 
