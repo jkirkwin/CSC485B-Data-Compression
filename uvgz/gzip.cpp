@@ -16,8 +16,9 @@ void GzipEncoder::processInput(std::istream& inStream) {
     const auto inputChunkSize = kb; // todo only reading a kilobyte at a time for now
 
     // Create Lzss output buffer and encoder
+    std::vector<bitset> lzssOutputBuffer;
     const auto buffSize = inputChunkSize * 2; // Ensure we have enough room in case of expansion.
-    std::vector<bitset> lzssOutputBuffer(buffSize);
+    lzssOutputBuffer.reserve(buffSize);
     LzssEncoder::symbol_consumer_t symbolConsumer = [&](const bitset& symbol) {
         lzssOutputBuffer.push_back(symbol);
     };
@@ -92,9 +93,6 @@ void GzipEncoder::sendBlockType1(std::vector<bitset> &lzssData, bool last) {
             pushMsbFirst(codeWord);
         }
         else {  // Backreference
-
-            assert (false); // todo lzss backrefs unimplemented.
-
             const auto &lenBaseSymbol = symbol; // Reference to avoid copy
             const auto lenOffsetSymbol = lzssData.at(++i);
             const auto distBaseSymbol = lzssData.at(++i);
@@ -123,7 +121,8 @@ void GzipEncoder::sendBlockType1(std::vector<bitset> &lzssData, bool last) {
  */
 GzipEncoder::chunk_t GzipEncoder::readChunk(std::istream& inStream, u32 chunkSize) {
     char nextChar {};
-    std::vector<u8> chunk(chunkSize);
+    std::vector<u8> chunk;
+    chunk.reserve(chunkSize);
 
     for (int i = 0; i < chunkSize; i++) {
         if (inStream.get(nextChar)) {
