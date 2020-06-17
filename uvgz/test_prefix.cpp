@@ -31,38 +31,3 @@ TEST_CASE("Canonical code generated successfully", "[prefix]") {
         REQUIRE(expected == result);
     }
 }
-
-TEST_CASE("Fixed codes lengths are correct", "[prefix]  [type1]") {
-    SECTION("LL code lengths are correct") {
-        const auto llCodeLengths = getFixedLLCodeLengths();
-        const int numSymbols {288};
-        REQUIRE (llCodeLengths.size() == numSymbols);
-
-        int i = 0;
-        while (i < numSymbols) {
-            const auto len = llCodeLengths.at(i);
-            if (i <= 143) {
-                REQUIRE(len == 8);
-            }
-            else if (i <= 255) {
-                REQUIRE(len == 9);
-            }
-            else if (i <= 279) {
-                REQUIRE(len == 7);
-            }
-            else {
-                REQUIRE(len == 8);
-            }
-            ++i;
-        }
-    }
-    SECTION("Distance code lengths are correct") {
-        const auto distCodeLengths = getFixedDistanceCodeLengths();
-        const auto numSymbols = 32;
-        REQUIRE(numSymbols == distCodeLengths.size());
-
-        for(const auto len : distCodeLengths) {
-            REQUIRE(len == 5);
-        }
-    }
-}

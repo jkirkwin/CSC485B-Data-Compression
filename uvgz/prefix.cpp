@@ -1,5 +1,21 @@
 #include "prefix.h"
 
+// LL codeword lengths for type 1:
+// 0-143 -> 8 bits
+// 144-255 -> 9 bits
+// 256-279 -> 7 bits
+// 280-287 -> 8 bits
+constexpr std::array<std::array<u32, 3>, 4> fixedLLCodeLengths {{
+    {{0, 143, 8}},
+    {{144, 255, 9}},
+    {{256, 279, 7}},
+    {{280, 287, 8}}
+}};
+
+/**
+ * To be used with constructCanonicalCode()
+ * @return The lengths used for the fixed block type 1 LL code.
+ */
 std::vector<u32> getFixedLLCodeLengths() {
     std::vector<u32> lengths {};
 
@@ -19,6 +35,14 @@ std::vector<u32> getFixedLLCodeLengths() {
     return lengths;
 }
 
+std::vector<bitset> getFixedLLCode() {
+    return constructCanonicalCode(getFixedLLCodeLengths());
+}
+
+/**
+ * To be used with constructCanonicalCode()
+ * @return The lengths used for the fixed block type 1 Distance code.
+ */
 std::vector<u32> getFixedDistanceCodeLengths() {
     // 32 lengths at 5 bits each
     std::vector<u32> lengths {};
@@ -29,6 +53,10 @@ std::vector<u32> getFixedDistanceCodeLengths() {
         lengths.push_back(bits);
     }
     return lengths;
+}
+
+std::vector<bitset> getFixedDistanceCode() {
+    return constructCanonicalCode(getFixedDistanceCodeLengths());
 }
 
 // Minimally adapted from the block2 starter code provided by Bill.
@@ -67,4 +95,12 @@ std::vector<bitset> constructCanonicalCode(std::vector<u32> const & lengths){
         }
     }
     return result_codes;
+}
+
+std::pair<bitset_vec, bitset_vec> getDynamicCodes(const bitset_vec& lzssSymbols) {
+    // todo
+
+    // need to run huffman and then mess with depths to make sure none exceed 15.
+
+
 }
