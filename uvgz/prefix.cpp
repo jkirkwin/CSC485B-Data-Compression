@@ -1,4 +1,5 @@
 #include "prefix.h"
+#include "lzss_backref.h"
 
 // LL codeword lengths for type 1:
 // 0-143 -> 8 bits
@@ -97,10 +98,77 @@ std::vector<bitset> constructCanonicalCode(std::vector<u32> const & lengths){
     return result_codes;
 }
 
-std::pair<bitset_vec, bitset_vec> getDynamicCodes(const bitset_vec& lzssSymbols) {
-    // todo
+std::pair<freq_table_t, freq_table_t> getLzssSymbolFrequencies(const bitset_vec& lzssSymbols) {
+    // todo consider using arrays instead
 
-    // need to run huffman and then mess with depths to make sure none exceed 15.
+    // 285 entries for LL code
+    freq_table_t llFreqs(285);
+
+    // 29 entries for Dist code
+    freq_table_t distFreqs(29);
+
+    for(int i = 0; i < lzssSymbols.size(); ++i) {
+        const auto symbol = lzssSymbols.at(i);
+        if (symbol.size() != LITERAL_BITS) { // backref
+            llFreqs.at(symbol.to_ulong())++;
+
+            const auto distSymbol = lzssSymbols.at(i+2);
+            distFreqs.at(distSymbol.to_ulong())++;
+
+            assert (lzssSymbols.size() > i+3); // Sanity check
+            i+=3; // Skip past the rest of the backreference.
+        }
+        else { // literal
+            llFreqs.at(symbol.to_ulong())++;
+        }
+    }
+
+    // Since the EOB marker is not in the LZSS input in my implementation, we must manually add it here.
+    assert(llFreqs.at(256) == 0);
+    llFreqs.at(256)++;
+
+    return {llFreqs, distFreqs};
+}
+
+std::vector<u32> frequenciesToLengths(const std::vector<u32>& frequencies) {
+    // todo this is where we need to run huffman.
+    // we will need to run huffman again later for CL code, so it must be generic.
+}
+
+std::pair<std::vector<u32>, std::vector<u32>> getDynamicCodeLengths(const bitset_vec& lzssSymbols) {
+//    const auto freqs = getLzssSymbolFrequencies(lzssSymbols);
+//    const auto llFreqs = freqs.first;
+//    const auto distFreqs = freqs.second;
+//
+//    const auto llCodeLengths = frequenciesToLengths(llFreqs);
+//    const auto distCodeLengths = frequenciesToLengths(distFreqs);
+
+    // todo actually generate dynamic codes
 
 
+
+    // Using dummy lengths for now
+    std::vector<u32> llCodeLengths;
+    for(unsigned int i = 0; i <= 225; i++) {
+        llCodeLengths.push_back(8);
+    }
+    for(unsigned int i = 226; i <= 285; i++) {
+        llCodeLengths.push_back(9);
+    }
+
+    // Using dummy lengths for now
+    std::vector<u32> distCodeLengths;
+    for(unsigned int i = 0; i <= 1; i++) {
+        distCodeLengths.push_back(4);
+    }
+    for(unsigned int i = 2; i <= 29; i++) {
+        distCodeLengths.push_back(5);
+    }
+
+    return {llCodeLengths, distCodeLengths};
+}
+
+std::vector<u32> getCLCodeLengths(const std::vector<u32> &llCodeLengths, const std::vector<u32> &distCodeLengths) {
+    // todo implement this properly
+    return {4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5};
 }

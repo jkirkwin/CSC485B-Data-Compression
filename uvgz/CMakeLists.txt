@@ -19,9 +19,10 @@ target_link_libraries(test_lzss lzss_lib)
 # Prefix Coding
 ###
 set(PREFIX_SRC prefix.cpp prefix.h)
-add_library(prefix_lib STATIC ${PREFIX_SRC})
+set(PREFIX_INCLUDE lzss_backref.h shared/binary.h)
+add_library(prefix_lib STATIC ${PREFIX_SRC} ${PREFIX_INCLUDE})
 
-set(PREFIX_TEST ${PREFIX_SRC} test_prefix.cpp)
+set(PREFIX_TEST ${PREFIX_SRC} ${PREFIX_INCLUDE} test_prefix.cpp)
 add_executable(test_prefix ${PREFIX_TEST})
 target_link_libraries(test_prefix prefix_lib)
 

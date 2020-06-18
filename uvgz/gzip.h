@@ -34,10 +34,16 @@ private:
     typedef std::vector<u8> chunk_t;
     static chunk_t readChunk(std::istream& inStream, u32 chunkSize=mb);
 
+    typedef std::vector<bitset> bitset_vec_t;
+
     void processInput(std::istream& inStream);
-    void sendBlocks(std::vector<u8> & rawData, std::vector<bitset> & lzssData, bool endOfData);
+    void sendBlocks(std::vector<u8> & rawData, bitset_vec_t & lzssData, bool endOfData);
     void sendBlockType0(std::vector<u8> &data, bool last);
     void sendBlockType1(std::vector<bitset> &lzssData, bool last);
+    void sendBlockType2(std::vector<bitset> &lzssData, bool last);
+    void sendLzssBlockHeaderFields(u8 type, bool last);
+    void sendLzssOutput(const bitset_vec_t &lzssData, const bitset_vec_t &llCode, const bitset_vec_t &distCode);
+    void sendEOB(const bitset_vec_t &llCode);
 
     void updateFooterValues(chunk_t& chunk);
 

@@ -31,3 +31,7 @@ TEST_CASE("Canonical code generated successfully", "[prefix]") {
         REQUIRE(expected == result);
     }
 }
+
+TEST_CASE("Dynamic codes lengths successfully generated", "[prefix] [type2]") {
+    REQUIRE(false); // todo
+}
