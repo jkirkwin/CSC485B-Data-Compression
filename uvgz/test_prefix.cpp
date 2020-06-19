@@ -32,10 +32,6 @@ TEST_CASE("Canonical code generated successfully", "[prefix]") {
     }
 }
 
-TEST_CASE("Dynamic codes lengths successfully generated", "[prefix] [type2]") {
-    REQUIRE(false); // todo
-}
-
 TEST_CASE("Limited-length huffman generates acceptable code") {
     std::vector<u32> weights = {5, 10, 15, 20, 20, 30}; // adapted from sayood
     std::vector<u32> expectedResult = {3, 3, 3, 3, 2, 2};

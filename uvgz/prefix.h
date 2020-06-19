@@ -22,21 +22,6 @@ namespace package_merge {
     std::vector<u32> getCodeLengths(std::vector<u32> weights, u32 limit);
 }
 
-namespace huffman {
-
-    /**
-     * Run the huffman coding algorithm to get a set of code lengths for an
-     * optimal prefix code for the given weights. Weights of 0 will be treated
-     * as if they were infinite and no code word length will be generated for
-     * any such entry.
-     *
-     * @param weights A vector W of weights to use.
-     * @return A vector L of lengths such that L[i] is the length of the
-     * codeword with weight W[i].
-     */
-    std::vector<u32> getCodeLengths(std::vector<u32>& weights);
-}
-
 /**
  * Given a vector of lengths where lengths.at(i) is the code length for symbol
  * i, returns a vector of codewords with the given lengths.
