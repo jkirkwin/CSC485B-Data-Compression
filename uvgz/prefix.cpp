@@ -1,6 +1,8 @@
 #include "prefix.h"
 #include "lzss_backref.h"
 #include <queue>
+#include <exception>
+#include <utility>
 
 namespace huffman {
 
@@ -92,6 +94,115 @@ namespace huffman {
     }
 }
 
+namespace package_merge {
+
+    /**
+     * An entry in a package has a weight and a set of keys which allow us to
+     * map the computed code lengths back to the original input items.
+     */
+    struct Entry {
+        Entry(u32 key, u32 weight): keys({key}), weight(weight) {
+        }
+
+        Entry(std::vector<u32>  keys, u32 weight): keys(std::move(keys)), weight(weight) {
+        }
+
+        Entry(Entry& a, Entry& b) {
+            keys.insert(keys.begin(), a.keys.begin(), a.keys.end());
+            keys.insert(keys.begin(), b.keys.begin(), b.keys.end());
+            weight = a.weight + b.weight;
+        }
+
+        std::vector<u32> keys; // todo should this be a set? Can an entry have multiple ocurrences of a key?
+        u32 weight;
+    };
+
+    /**
+     * Used to order entries within a package.
+     */
+    struct EntryComparator {
+        bool operator()(const Entry& a, const Entry& b) const {
+            if (a.weight == b.weight) {
+                // This is needed to allow distinct entries with the same
+                // weight to be inserted into a set.
+                return a.keys < b.keys;
+            }
+            else {
+                return a.weight < b.weight;
+            }
+        }
+    };
+
+    typedef std::set<Entry, EntryComparator> pkg;
+
+    /*
+     * Get a package containing pairs of consecutive elements in the given
+     * package. If there are an odd number of elements in the original package
+     * then the largest element will not belong to any of the pairs returned.
+     */
+    pkg getAdjacentPairs(const pkg& package) {
+        pkg result;
+        auto it = package.begin();
+        while (it != package.end()) {
+            auto first = *it;
+            ++it;
+            if (it != package.end()) { // There is a pair remaining
+                auto second = *it;
+                ++it;
+
+                Entry pair(first, second);
+                result.insert(pair);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @return True iff the given initial package can be encoded subject to the given limit.
+     */
+    bool isPossibleLimit(const pkg& p, u32 limit) {
+        // The most inputs we can encode with the limit L is 2^Limit
+        return 1u << limit;
+    }
+
+    std::vector<u32> getCodeLengths(std::vector<u32> weights, u32 limit) {
+        // First, eliminate all weights of 0 to create the initial package.
+        pkg initial;
+        for (int i = 0; i < weights.size(); ++i) {
+            if (weights.at(i) > 0) {
+                initial.insert(Entry(i, weights.at(i)));
+            }
+        }
+        assert (isPossibleLimit(initial, limit));
+
+        // Now begin the algorithm as described in the Sayood book.
+        // For L-1 iterations, compute the pairs from the current package and
+        // merge them with the initial set of nodes.
+        pkg package = initial;
+        for (int i = 0; i < limit-1; ++i) {
+            package = getAdjacentPairs(package);
+            pkg initialCopy = initial; // Without this, the merge operation destroys our initial package.
+            package.merge(initialCopy);
+        }
+
+        // The first 2m-2 items in the final package are used in the code.
+        auto entriesUsed = 2 * initial.size() - 2;
+        assert (entriesUsed <= package.size());
+
+        // Create the result vector and compute code lengths from the final package.
+        std::vector<u32> codeLengths(weights.size(), 0);
+        auto it = package.begin();
+        for (int i = 0; i < entriesUsed; ++i) {
+            for (auto key : it->keys) {
+                codeLengths.at(key)++;
+            }
+            ++it;
+        }
+
+        // todo check that the KM inequality is met
+        return codeLengths;
+    }
+}
 
 
 // LL codeword lengths for type 1:
@@ -224,7 +335,7 @@ std::pair<freq_table_t, freq_table_t> getLzssSymbolFrequencies(const bitset_vec&
 }
 
 std::vector<u32> frequenciesToLengths(const std::vector<u32>& frequencies) {
-    // todo this is where we need to run huffman.
+    // todo this is where we need to run package merge.
     // we will need to run huffman again later for CL code, so it must be generic.
 }
 

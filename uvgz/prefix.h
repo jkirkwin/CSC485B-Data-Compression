@@ -7,17 +7,32 @@
 
 using bitset_vec = std::vector<bitset>;
 
+namespace package_merge {
+    /**
+     * Get a set of code lengths for an optimal prefix code for the given
+     * weights to the maximum length constraint. Weights of 0 will be treated
+     * as if they were infinite and no code word length will be generated for
+     * any such entry.
+     *
+     * @param weights A vector W of weights to use.
+     * @param max The maximum allowed codeword length.
+     * @return A vector L of lengths such that L[i] is the length of the
+     * codeword with weight W[i]. L[i] <= limit for all i.
+     */
+    std::vector<u32> getCodeLengths(std::vector<u32> weights, u32 limit);
+}
+
 namespace huffman {
 
     /**
-     * Run a huffman coding algorithm to get a set of code lengths for an
+     * Run the huffman coding algorithm to get a set of code lengths for an
      * optimal prefix code for the given weights. Weights of 0 will be treated
      * as if they were infinite and no code word length will be generated for
      * any such entry.
      *
      * @param weights A vector W of weights to use.
      * @return A vector L of lengths such that L[i] is the length of the
-     * codeword with weight W[i]
+     * codeword with weight W[i].
      */
     std::vector<u32> getCodeLengths(std::vector<u32>& weights);
 }

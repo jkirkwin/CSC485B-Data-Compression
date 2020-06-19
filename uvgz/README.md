@@ -40,3 +40,5 @@ Otherwise, a type 1 block is used.
 Please excuse the difference in naming conventions etc between Bill's code, mine, and the CRC and boost libraries! 
 
 <!-- TODO -->
+
+Package merge!

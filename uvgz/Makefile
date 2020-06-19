@@ -36,3 +36,4 @@ clean:
 
 # TODO Holy god there are a lot of compiler warnings.
 
+# TODO enable debug/asserts - add a new target
