@@ -81,8 +81,7 @@ std::pair<freq_table_t, freq_table_t> getLzssSymbolFrequencies(const bitset_vec&
  */
 std::vector<u32> getCLCodeLengths(const std::vector<u32> &llCodeLengths, const std::vector<u32> &distCodeLengths);
 
-// todo - type 2 - CL code specifics - first make sure the first huffman application is working first - use a dummy CL code as done in block2 starter code
+// todo - type 2 - CL code specifics
 
-// todo - optimization - package-merge implementation
 
 #endif //UVGZ_PREFIX_H

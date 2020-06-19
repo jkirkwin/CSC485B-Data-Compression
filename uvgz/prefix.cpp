@@ -175,28 +175,47 @@ namespace package_merge {
         }
         assert (isPossibleLimit(initial, limit));
 
-        // Now begin the algorithm as described in the Sayood book.
-        // For L-1 iterations, compute the pairs from the current package and
-        // merge them with the initial set of nodes.
-        pkg package = initial;
-        for (int i = 0; i < limit-1; ++i) {
-            package = getAdjacentPairs(package);
-            pkg initialCopy = initial; // Without this, the merge operation destroys our initial package.
-            package.merge(initialCopy);
-        }
-
-        // The first 2m-2 items in the final package are used in the code.
-        auto entriesUsed = 2 * initial.size() - 2;
-        assert (entriesUsed <= package.size());
-
-        // Create the result vector and compute code lengths from the final package.
         std::vector<u32> codeLengths(weights.size(), 0);
-        auto it = package.begin();
-        for (int i = 0; i < entriesUsed; ++i) {
-            for (auto key : it->keys) {
-                codeLengths.at(key)++;
+        if (initial.empty()) {
+            // Quit early. No non-zero weights are given, so there is no
+            // information content and there is no non-zero length.
+            return codeLengths;
+        }
+        else if(initial.size() == 1) {
+            // Quit early. There is only a single non-zero weight.
+            auto entry = *(initial.begin());
+            auto keys = entry.keys;
+            assert (keys.size() == 1);
+            auto key = keys.front();
+            codeLengths[key]++;
+            return codeLengths;
+        }
+        else {
+            // Perform the algorithm as described in the Sayood book, under the guarantee
+            // that we have a non-trivial input.
+
+            // For L-1 iterations, compute the pairs from the current package and
+            // merge them with the initial set of nodes.
+            pkg package = initial;
+            for (int i = 0; i < limit-1; ++i) {
+                package = getAdjacentPairs(package);
+                pkg initialCopy = initial; // Without this, the merge operation destroys our initial package.
+                package.merge(initialCopy);
             }
-            ++it;
+
+            // The first 2m-2 items in the final package are used to compute the lengths
+            auto entriesUsed = 2 * initial.size() - 2;
+            assert (entriesUsed <= package.size());
+
+            // Compute code lengths from the final package. The keys stored in each entry
+            // give us the position of the entries in the input (and output) array(s).
+            auto it = package.begin();
+            for (int i = 0; i < entriesUsed; ++i) {
+                for (auto key : it->keys) {
+                    codeLengths.at(key)++;
+                }
+                ++it;
+            }
         }
 
         // todo check that the KM inequality is met
@@ -303,8 +322,6 @@ std::vector<bitset> constructCanonicalCode(std::vector<u32> const & lengths){
 }
 
 std::pair<freq_table_t, freq_table_t> getLzssSymbolFrequencies(const bitset_vec& lzssSymbols) {
-    // todo consider using arrays instead
-
     // 285 entries for LL code
     freq_table_t llFreqs(285);
 
@@ -334,40 +351,15 @@ std::pair<freq_table_t, freq_table_t> getLzssSymbolFrequencies(const bitset_vec&
     return {llFreqs, distFreqs};
 }
 
-std::vector<u32> frequenciesToLengths(const std::vector<u32>& frequencies) {
-    // todo this is where we need to run package merge.
-    // we will need to run huffman again later for CL code, so it must be generic.
-}
-
 std::pair<std::vector<u32>, std::vector<u32>> getDynamicCodeLengths(const bitset_vec& lzssSymbols) {
-//    const auto freqs = getLzssSymbolFrequencies(lzssSymbols);
-//    const auto llFreqs = freqs.first;
-//    const auto distFreqs = freqs.second;
-//
-//    const auto llCodeLengths = frequenciesToLengths(llFreqs);
-//    const auto distCodeLengths = frequenciesToLengths(distFreqs);
+    // Get the frequencies of LZSS symbols
+    const auto freqs = getLzssSymbolFrequencies(lzssSymbols);
+    const auto llFreqs = freqs.first;
+    const auto distFreqs = freqs.second;
 
-    // todo actually generate dynamic codes
-
-
-
-    // Using dummy lengths for now
-    std::vector<u32> llCodeLengths;
-    for(unsigned int i = 0; i <= 225; i++) {
-        llCodeLengths.push_back(8);
-    }
-    for(unsigned int i = 226; i <= 285; i++) {
-        llCodeLengths.push_back(9);
-    }
-
-    // Using dummy lengths for now
-    std::vector<u32> distCodeLengths;
-    for(unsigned int i = 0; i <= 1; i++) {
-        distCodeLengths.push_back(4);
-    }
-    for(unsigned int i = 2; i <= 29; i++) {
-        distCodeLengths.push_back(5);
-    }
+    // Run package merge algorithm to get optimal code length tables.
+    const auto llCodeLengths = package_merge::getCodeLengths(llFreqs, 15);
+    const auto distCodeLengths = package_merge::getCodeLengths(distFreqs, 15);
 
     return {llCodeLengths, distCodeLengths};
 }
