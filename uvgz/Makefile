@@ -34,6 +34,10 @@ main: main.cpp gzip.o
 clean:
 	rm -f *.o $(BINARIES)
 
+rebuild: clean all
+
 # TODO Holy god there are a lot of compiler warnings.
 
 # TODO enable debug/asserts - add a new target
+
+# TODO Ensure asserts are off for submission
