@@ -1,5 +1,98 @@
 #include "prefix.h"
 #include "lzss_backref.h"
+#include <queue>
+
+namespace huffman {
+
+    typedef struct HuffmanTreeNode {
+        explicit HuffmanTreeNode(int key, u32 weight, HuffmanTreeNode* left=nullptr, HuffmanTreeNode* right=nullptr):
+            weight(weight), key(key), left(left), right(right) {
+
+        }
+
+        // True if this node has a lower weight than the one passed in
+        bool operator<(const struct HuffmanTreeNode& other) const {
+            return this->weight < other.weight;
+        }
+
+        bool operator>(const struct HuffmanTreeNode& other) const {
+            return other < *this;
+        }
+
+        HuffmanTreeNode* left;
+        HuffmanTreeNode* right;
+        u32 weight;
+        u32 key;
+    } node_t;
+
+    typedef struct HuffmanNodeComparator {
+        bool operator()(node_t* first, node_t* second) {
+            // Use > so that the lowest weights are at the front of the queue
+            return first->weight > second->weight;
+        }
+    } comparator_t;
+
+    void computeCodeLengths(const node_t* root, std::vector<u32> &codeLengths, const u32 depth=0) {
+        assert (root != nullptr);
+
+        bool hasLeftChild = root->left != nullptr;
+        bool hasRightChild = root->right != nullptr;
+        assert (hasLeftChild == hasRightChild); // No interior node should have a single child
+
+        if (!hasLeftChild) { // Base case: leaf node
+            codeLengths.at(root->key) += depth;
+        }
+        else { // Recursive case
+            computeCodeLengths(root->left, codeLengths, depth + 1);
+            computeCodeLengths(root->right, codeLengths, depth + 1);
+        }
+    }
+
+    node_t* buildTree(const std::vector<u32>& weights) {
+        // Build a priority queue of leaf nodes for all non-zero weights
+        std::priority_queue<node_t*, std::vector<node_t*>, comparator_t> queue;
+        for(int i = 0; i < weights.size(); ++i) {
+            if (weights.at(i) > 0) {
+                auto nodePtr = new node_t(i, weights.at(i));
+                queue.push(nodePtr);
+            }
+        }
+
+        // Build the tree
+        while(queue.size() >= 2) {
+            // Get the two smallest elements and combine them.
+            auto first = queue.top();
+            queue.pop();
+            auto second = queue.top();
+            queue.pop();
+            auto combined = new node_t(-1, first->weight + second->weight, first, second);
+            queue.push(combined);
+        }
+
+        assert (queue.size() == 1);
+        return queue.top();
+    }
+
+    void deleteTree(node_t* root) {
+        if (root != nullptr) {
+            deleteTree(root->left);
+            deleteTree(root->right);
+            delete root;
+        }
+    }
+
+    std::vector<u32> getCodeLengths(std::vector<u32>& weights) {
+        auto root = buildTree(weights);
+        std::vector<u32> codeLengths(weights.size(), 0);
+        computeCodeLengths(root, codeLengths);
+
+        deleteTree(root);
+
+        return codeLengths;
+    }
+}
+
+
 
 // LL codeword lengths for type 1:
 // 0-143 -> 8 bits

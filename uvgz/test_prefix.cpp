@@ -35,3 +35,27 @@ TEST_CASE("Canonical code generated successfully", "[prefix]") {
 TEST_CASE("Dynamic codes lengths successfully generated", "[prefix] [type2]") {
     REQUIRE(false); // todo
 }
+
+TEST_CASE("Huffman generates correct code lengths") {
+    SECTION("Trivial case") {
+        std::vector<u32> weights {1, 2};
+        std::vector<u32> expected {1, 1};
+        REQUIRE (huffman::getCodeLengths(weights) == expected);
+    }
+    SECTION("Input contains weights of size 0") {
+        std::vector<u32> weights {1, 0, 2};
+        std::vector<u32> expected {1, 0, 1};
+        REQUIRE (huffman::getCodeLengths(weights) == expected);
+    }
+
+    SECTION("Large input") {
+        // Example adapted from https://en.wikipedia.org/wiki/Huffman_coding#Compression
+        std::vector<u32> weights {1, 0, 1, 4, 0, 1, 1, 1, 0,
+                                  2, 2, 2, 2, 0, 2, 0, 0, 2,
+                                  3, 4, 0, 1, 7, 0, 0, 0, 0};
+        std::vector<u32> expected {5, 0, 5, 3, 0, 5, 5, 5, 0,
+                                   4, 4, 4, 4, 0, 4, 0, 0, 4,
+                                   4, 3, 0, 5, 3, 0 ,0 ,0 ,0};
+        REQUIRE (huffman::getCodeLengths(weights) == expected);
+    }
+}
