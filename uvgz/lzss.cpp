@@ -14,20 +14,12 @@ void LzssEncoder::flush() {
     }
 }
 
+/*
+ * Runs a naive linear search to find a backreference if possible. Otherwise
+ * emits a literal.
+ */
 void LzssEncoder::encodeFromLookahead() {
     assert (!lookahead.empty());
-
-    /*
-     * iterate back through the history and compare the first 3 characters to the current lookahead prefix.
-     *
-     * history may be short or empty
-     *
-     * use a literal if we can't find a match
-     */
-//    auto iterator = history.rbegin();
-//    for(; iterator != history.rend(); ++iterator) {
-//
-//    }
 
     const auto minToMatch = 3;
     if (minToMatch <= lookahead.size()) {

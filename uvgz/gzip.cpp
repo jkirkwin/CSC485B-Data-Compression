@@ -13,7 +13,7 @@ void GzipEncoder::processInput(std::istream& inStream) {
     // Repeatedly read an arbitrarily sized chunk of input data and run it
     // through LZSS. Determine the block type to use based on the result.
 
-    const auto inputChunkSize = kb; // todo only reading a kilobyte at a time for now
+    const auto inputChunkSize = 5*kb;
 
     // Create Lzss output buffer and encoder
     std::vector<bitset> lzssOutputBuffer;
@@ -41,7 +41,7 @@ void GzipEncoder::processInput(std::istream& inStream) {
         sendBlocks(currentChunk, lzssOutputBuffer, last);
 
         // Update markers
-        currentChunk = nextChunk; // todo use reference types here to speed things up?
+        currentChunk = nextChunk; // todo use references here to speed things up?
         nextChunk = readChunk(inStream, inputChunkSize);
     }
 }

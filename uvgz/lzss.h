@@ -39,9 +39,8 @@ public:
     // giving input data.
     typedef std::function< void(bitset) > symbol_consumer_t;
 
-    // todo consider increasing these
-    static const int LOOKAHEAD_CAPACITY = 100u; // maximum allowed value of 258
-    static const int HISTORY_CAPACITY = 1000u; // maximum allowed value of 32768
+    static const int LOOKAHEAD_CAPACITY = 250u; // maximum allowed value of 258
+    static const int HISTORY_CAPACITY = 5000u; // maximum allowed value of 32768
 
     /**
      * Constructs a new encoder.
