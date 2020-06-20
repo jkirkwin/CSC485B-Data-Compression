@@ -5,3 +5,4 @@ cmake-build-debug/
 catch/
 uvgz
 run_gzstat.sh
+*.log
