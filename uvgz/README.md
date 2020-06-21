@@ -1,44 +1,52 @@
 # Assignmnet 2 - GZip Compressor (`uvgz`)
 
-## Initial strategy
-I'm a little scared about the scale of complexity involved here. Most of it comes from the myriad of decisions available
-to the compressor and the incentives (i.e. marks available) for performance - both time and compression.
-
-Since I'm not sure if I'll have the time needed to finish if I jump in and try to be clever in the beginning. As such I
-am going to aim for a fairly simple implementation to start and if I have any time left over before the due date then 
-optimizations can be refactored in.
-
 ## Design/Implementation Overview
-<!-- TODO -->
+I decided to go with a similar breakdown as for assignment 1 in terms of the design.
+There are a handful of static libraries (see below) that allow for some minimal modularity and unit testing.
+The LZSS-related functionality and logic lives inside an "Encoder" abstraction (similarly to the encoders in my 
+assignment 1 submission) and a similar encoder abstraction wraps the entire GZip/DEFLATE implemenatation (the 
+imaginatively name GzipEncoder).
+
+The major chunks that I kept as separate as possible are:
+* A prefix coding library which deals with Huffman/Package-Merge and generating codes for an LZSS symbol stream.
+* An LZSS library which supplies a transparent LZSS implementation to turn raw data into a stream of literals and 
+backreferences
+* The output stream implementation provided by bill
+* A GZip library which supplies an implementation of the afformentioned GZip Encoder and uses the other two libraries
+and the output stream based on the GZip spec.
 
 ## Dir Structure
 Concerns are roughly broken up into:
 * GZip file, member, and block structure -> `gzip.cpp/h`
 * LZSS Encoding -> `lzss.cpp/h`, `lzss_backref.h`
-* Prefix coding -> `prefix.h`
+* Prefix coding -> `prefix.cpp/h`
+* Running the code -> `main.cpp`
+
+I wanted to have a separate CMake build and subdirectory for each library but I was wasting too much time fighting with
+it so please forgive the monolith project root folder.
 
 ## Deflate Compression Decisions
 There are a crazy amount of different decisions that a DEFLATE compressor can make to try to minimize output size.
 
-<!-- TODO -->
+The initial architecture decisions mean that the LZSS implementation is transparent to the GzipEncoder, and decisions on
+the selection of backreferences must be left up to it.
 
 ### Choosing LZSS back-references
-<!-- TODO -->
+A very simple, very naive linear search is used by the LzssEncoder in order to find the most recent usable backreference
+of sufficient length. 
 
 ### Choosing block boundaries
-Every block will be a fixed size, except the last one which will be whatever size we have left over.
+Every block is a fixed size, except the last one which is whatever size we have left over.
 
 ### Choosing block types
-Block types will be chosen based on the success of the LZSS scheme for a given chunk of data. If little compression
-is expected, then a type 0 block will be used.
-
-Otherwise, if large savings are expected through the use of dynamic codes, then a type 2 block is used.
-
-Otherwise, a type 1 block is used.
+Block type 2 is always used.
 
 ## Notes for the marker
 Please excuse the difference in naming conventions etc between Bill's code, mine, and the CRC and boost libraries! 
 
-<!-- TODO -->
-
-Package merge!
+### Rubric Items
+* You're reading the README so that should be covered (as long as this is detailed enough). The code is also fairly 
+well documented.
+* I've implemented all the block types and compute backreferences using a window of ~5000 bytes.
+* For type 2 Dynamic LL and Distance codes are generated based on LZSS symbol frequency, but it's done with 
+Package-Merge, not normal Huffman coding.
