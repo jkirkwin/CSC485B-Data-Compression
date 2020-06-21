@@ -61,12 +61,17 @@ std::pair<freq_table_t, freq_table_t> getLzssSymbolFrequencies(const bitset_vec&
 /**
  * @param llCodeLengths The lengths of the literals/lengths codewords being used.
  * @param distCodeLengths The lengths of the distance codewords being used.
+ * @return A vector of CL symbols encoding the LL and Distance code lengths.
+ */
+std::vector<bitset> getCLSymbols(const std::vector<u32> &llCodeLengths, const std::vector<u32> &distCodeLengths);
+
+
+/**
+ * Generates an optimal set of lengths for the prefix code to encode the CL symbols.
+ * @param clSymbols The CL symbols to be encoded with the prefix code.
  * @return Lengths for a CL (Code-Length) code which will encode the Distance and LL
  * codes' codeword lengths.
  */
-std::vector<u32> getCLCodeLengths(const std::vector<u32> &llCodeLengths, const std::vector<u32> &distCodeLengths);
-
-// todo - type 2 - CL code specifics
-
+std::vector<u32> getCLCodeLengths(const std::vector<bitset> &clSymbols);
 
 #endif //UVGZ_PREFIX_H

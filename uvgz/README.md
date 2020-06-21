@@ -48,5 +48,6 @@ Please excuse the difference in naming conventions etc between Bill's code, mine
 * You're reading the README so that should be covered (as long as this is detailed enough). The code is also fairly 
 well documented.
 * I've implemented all the block types and compute backreferences using a window of ~5000 bytes.
-* For type 2 Dynamic LL and Distance codes are generated based on LZSS symbol frequency, but it's done with 
+* For type 2 Dynamic LL and Distance codes are generated based on LZSS symbol frequency and it's done with 
 Package-Merge, not normal Huffman coding.
+* The CL code RLE functionality is used and the CL Prefix code is generated dynamically

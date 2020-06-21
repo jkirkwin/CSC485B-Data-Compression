@@ -105,19 +105,17 @@ void GzipEncoder::sendBlockType2(std::vector<bitset> &lzssData, bool last) {
     const auto llCode = constructCanonicalCode(llCodeLengths);
     const auto distCode = constructCanonicalCode(distCodeLengths);
 
-    // todo make appropriate changes (down below) once this is actually
-    //  generating a CL prefix code using the code length tables instead
-    //  of giving a hard-coded result.
-    const auto clCodeLengths = getCLCodeLengths(llCodeLengths, distCodeLengths);
+    // Compute the CL code and metadata
+    auto clSymbols = getCLSymbols(llCodeLengths, distCodeLengths);
+    auto clCodeLengths = getCLCodeLengths(clSymbols);
+    auto clCode = constructCanonicalCode(clCodeLengths);
 
     // There needs to be at least one use of symbol 256 (EOB), so there must be at least 257 elements
     assert(llCodeLengths.size() >= 257);
-    u32 HLIT = llCodeLengths.size() - 257;
+    u32 HLIT = llCodeLengths.size() - 257; // todo optimize these for trailing zeros. May need to do so before getting CL code.
     u32 HDIST = distCodeLengths.empty() ? 0 : distCodeLengths.size() - 1;
 
     // todo compute HCLEN properly
-        //We will use a fixed CL code that uses 4 bits for values 0 - 13 and 5 bits for everything else
-        //(including the RLE symbols, which we do not use).
     u32 HCLEN = 15; // = 19 - 4 (since we will provide 19 CL codes, whether or not they get used)
 
     // These are all numbers so Rule #1 applies
@@ -135,31 +133,23 @@ void GzipEncoder::sendBlockType2(std::vector<bitset> &lzssData, bool last) {
         this->outBitStream.push_bits(len,3);
     }
 
-    // Push the LL code lengths using the CL code
-    // todo use the RLE features for the CL code.
-    for (auto len: llCodeLengths) {
-        assert(len <= 15); // Lengths must be at most 15 bits
-        // todo (If we had computed a real CL prefix code, we would use it here instead)
-        const bitset clSymbol(4, len);
+    // Send the LL and Distance code lengths with the CL code
+    for (const auto& item : clSymbols) {
+        const auto bits = item.size();
+        bool isCLSymbol = bits == 4 || bits == 5; // Otherwise it must be an offset portion of an RLE sequence
 
-        pushMsbFirst(clSymbol);
-    }
-
-    // Push the distance code lengths with the CL code.
-    if (distCodeLengths.empty()) {
-            //If no distance codes were used, just push a length of zero as the only code length
-            this->outBitStream.push_bits(0,5);
-    }
-    else {
-        for (auto len: distCodeLengths){
-            assert(len <= 15); // Lengths must be at most 15 bits
-
-            // todo once we have an actual CL prefix code, use it here.
-            const bitset clSymbol(4, len);
-
-            pushMsbFirst(clSymbol);
+        if (isCLSymbol) {
+            // RLE literal or
+            const auto codeWord = clCode.at(item.to_ulong());
+            pushMsbFirst(codeWord);
+        }
+        else {
+            // RLE Offset value
+            this->outBitStream.push_bits(item);
         }
     }
+    // todo once we've updated the HXXX fields, we may have to check if the distance code table is empty and ensure that we're
+    //          still sending one code length
 
     // send the actual block content
     sendLzssOutput(lzssData, llCode, distCode);

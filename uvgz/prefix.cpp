@@ -273,7 +273,137 @@ std::pair<std::vector<u32>, std::vector<u32>> getDynamicCodeLengths(const bitset
     return {llCodeLengths, distCodeLengths};
 }
 
-std::vector<u32> getCLCodeLengths(const std::vector<u32> &llCodeLengths, const std::vector<u32> &distCodeLengths) {
-    // todo implement this properly
-    return {4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5};
+/*
+ * Append CL symbols for the given run of the same length.
+ */
+void appendCLRun(u32 len, u32 times, std::vector<bitset>& result) {
+    const u32 symbolBits {4};
+    const u32 rleBits {5};
+    const bitset literal(symbolBits, len);
+
+    if (times < 4) {
+        // We must use explicit literals
+        for (int i = 0; i < times; ++i) {
+            result.push_back(literal);
+        }
+    }
+    else if (len != 0) {  // Use symbol 16 for runs
+        bitset rleSymbol(rleBits, 16);
+        u32 baseCount = 3;
+        u32 offsetBits = 2;
+        u32 offsetMax = 3;
+
+        // Push one literal first
+        result.push_back(literal);
+        times--;
+
+        while (times >= baseCount) {
+            // Push the RLE symbol
+            result.push_back(rleSymbol);
+            times -= baseCount;
+
+            // Push the offset field
+            u8 delta = std::min(times, offsetMax);
+            bitset offset(offsetBits, delta);
+            result.push_back(offset);
+            times -= delta;
+        }
+
+        // Push any remaining literals
+        while (times > 0) {
+            result.push_back(literal);
+            --times;
+        }
+    }
+    else { // Encode a run of zeros
+        // We choose between symbols 18 and 17 for RLE depending on run length.
+        while (times > 0) {
+            if (times >= 11) {
+                bitset rleSymbol(rleBits, 18);
+                u32 baseCount = 11;
+                u32 offsetBits = 7;
+                u32 offsetMax = 127;
+
+                result.push_back(rleSymbol);
+                times -= baseCount;
+
+                u8 delta = std::min(times, offsetMax);
+                bitset offset(offsetBits, delta);
+                result.push_back(offset);
+                times -= delta;
+            }
+            else if (times >= 3) {
+                bitset rleSymbol(rleBits, 17);
+                u32 baseCount = 3;
+                u32 offsetBits = 3;
+                u32 offsetMax = 7;
+
+                result.push_back(rleSymbol);
+                times -= baseCount;
+
+                u8 delta = std::min(times, offsetMax);
+                bitset offset(offsetBits, delta);
+                result.push_back(offset);
+                times -= delta;
+            }
+            else {
+                result.push_back(literal);
+            }
+        }
+    }
+}
+
+/*
+ * Appends the CL symbols for the given lengths to the result vector.
+ */
+void appendCLSymbols(const std::vector<u32> &lengths, std::vector<bitset>& result) {
+    const auto literalBits = 4;
+
+    // For each length, determine the appropriate symbol and check if we can use RLE.
+    u32 prev = lengths.at(0); // the last length found
+    u32 count = 1; // the number of times we've seen prev
+    for (int i = 1; i < lengths.size(); ++i) {
+        auto len = lengths.at(i);
+        if (len == prev) { // Run continues
+            ++count;
+        }
+        else { // End of run
+            // Output count copies of prev and update locals
+            appendCLRun(prev, count, result);
+            prev = len;
+            count = 1;
+        }
+    }
+    appendCLRun(prev, count, result);
+}
+
+std::vector<bitset> getCLSymbols(const std::vector<u32> &llCodeLengths, const std::vector<u32> &distCodeLengths) {
+    // Runs overlapping the two length tables will not be encoded for the sake of simplicity
+    std::vector<bitset> result;
+    appendCLSymbols(llCodeLengths, result);
+    appendCLSymbols(distCodeLengths, result);
+    return result;
+}
+
+std::vector<u32> getCLFrequencies(const std::vector<bitset> &clSymbols) {
+    std::vector<u32> freqs(19, 0);
+    for (const auto& symbol : clSymbols) {
+        auto symbolBits = symbol.size();
+
+        // A field of any other width must be one of the offset fields following an RLE symbol.
+        bool isLiteralOrRle = symbolBits == 4 || symbolBits == 5;
+        if (isLiteralOrRle) {
+            freqs.at(symbol.to_ulong())++;
+        }
+    }
+    return freqs;
+}
+
+std::vector<u32> getCLCodeLengths(const std::vector<bitset> &clSymbols) {
+    // todo consider whether we should remove trailing 0's from the
+    //  LL/Distance code length vectors before computing the Cl code
+
+    const int maxBits = 7;
+    const auto freqs = getCLFrequencies(clSymbols);
+    return package_merge::getCodeLengths(freqs, maxBits);
 }
