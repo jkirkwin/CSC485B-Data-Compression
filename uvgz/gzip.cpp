@@ -39,22 +39,28 @@ void GzipEncoder::processInput(std::istream& inStream) {
         lzssOutputBuffer.clear();
 
         // Update markers
-        currentChunk = nextChunk; // todo use references here to speed things up?
+        currentChunk = nextChunk; // todo use references here to decrease memory
         nextChunk = readChunk(inStream, inputChunkSize);
     }
 }
 
 void GzipEncoder::sendBlocks(std::vector<u8> &rawData, std::vector<bitset> &lzssData, bool endOfData) {
-    // todo choose block types based on lzss results
-    //      - check if lzss helps
-    //             - if not, type 0
-    //             - if so, determine if huffman will help using frequencies
-
-    if (lzssData.size() >= rawData.size()) {
+    const int minThreshold {50};
+    const int type2Threshold {500};
+    const double maxToleratedExpansion {1.2}; // Determined by benchmarking.
+    if (rawData.size() <= minThreshold) {
+        // Type one has the least overhead so we use it for the shortest blocks.
+        sendBlockType1(lzssData, endOfData);
+    }
+    else if (lzssData.size() >= rawData.size() * maxToleratedExpansion) {
+        // Type 0 is used if we don't have many back references
         sendBlockType0(rawData, endOfData);
     }
+    else if (rawData.size() <= type2Threshold) {
+        // Type 2 will usually be best for longer inputs.
+        sendBlockType1(lzssData, endOfData);
+    }
     else {
-//        sendBlockType1(lzssData, endOfData);
         sendBlockType2(lzssData, endOfData);
     }
 }

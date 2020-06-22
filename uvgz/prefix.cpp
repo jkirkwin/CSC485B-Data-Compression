@@ -22,7 +22,7 @@ namespace package_merge {
             weight = a.weight + b.weight;
         }
 
-        std::vector<u32> keys; // todo should this be a set? Can an entry have multiple ocurrences of a key?
+        std::vector<u32> keys;
         u32 weight;
     };
 
@@ -402,9 +402,6 @@ std::vector<u32> getCLFrequencies(const std::vector<bitset> &clSymbols) {
 }
 
 std::vector<u32> getCLCodeLengths(const std::vector<bitset> &clSymbols) {
-    // todo consider whether we should remove trailing 0's from the
-    //  LL/Distance code length vectors before computing the Cl code
-
     const int maxBits = 7;
     const auto freqs = getCLFrequencies(clSymbols);
     return package_merge::getCodeLengths(freqs, maxBits);
