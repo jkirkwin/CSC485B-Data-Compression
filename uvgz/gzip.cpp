@@ -13,7 +13,7 @@ void GzipEncoder::processInput(std::istream& inStream) {
     // Repeatedly read an arbitrarily sized chunk of input data and run it
     // through LZSS. Determine the block type to use based on the result.
 
-    const auto inputChunkSize = 5*kb;
+    const auto inputChunkSize = 20*kb;
 
     // Create Lzss output buffer and encoder
     std::vector<bitset> lzssOutputBuffer;
@@ -29,16 +29,14 @@ void GzipEncoder::processInput(std::istream& inStream) {
     auto nextChunk = readChunk(inStream, inputChunkSize);
     while(! currentChunk.empty()) {
         // Run the chunk through LZSS
-        lzssOutputBuffer.clear();
         lzssEncoder.acceptData(currentChunk);
 
         // Send the data
         bool last = nextChunk.empty();
         updateFooterValues(currentChunk);
-        if (last) {
-            lzssEncoder.flush();
-        }
+        lzssEncoder.flush();
         sendBlocks(currentChunk, lzssOutputBuffer, last);
+        lzssOutputBuffer.clear();
 
         // Update markers
         currentChunk = nextChunk; // todo use references here to speed things up?
@@ -52,9 +50,13 @@ void GzipEncoder::sendBlocks(std::vector<u8> &rawData, std::vector<bitset> &lzss
     //             - if not, type 0
     //             - if so, determine if huffman will help using frequencies
 
-//    sendBlockType0(rawData, endOfData);
-//    sendBlockType1(lzssData, endOfData);
-    sendBlockType2(lzssData, endOfData);
+    if (lzssData.size() >= rawData.size()) {
+        sendBlockType0(rawData, endOfData);
+    }
+    else {
+//        sendBlockType1(lzssData, endOfData);
+        sendBlockType2(lzssData, endOfData);
+    }
 }
 
 void GzipEncoder::sendBlockType0(std::vector<u8> &data, bool last) {
@@ -93,6 +95,25 @@ void GzipEncoder::sendBlockType1(std::vector<bitset> &lzssData, bool last) {
     sendEOB(llCode);
 }
 
+void removeTrailingZeros(std::vector<u32>& vec) {
+    while (!vec.empty() && vec.back() == 0) {
+        vec.pop_back();
+    }
+}
+
+u32 countTrailingZeros(const std::vector<u32>& vec, std::vector<u32> permutation) {
+    assert (vec.size() == permutation.size());
+    const auto size = vec.size();
+    for (int i = 0; i < size; ++i) {
+        auto index = permutation.at(size - i - 1);
+        auto item = vec.at(index);
+        if (item != 0) {
+            return i;
+        }
+    }
+    return vec.size();
+}
+
 // Adapted from Bill's provided code for block type 2.
 void GzipEncoder::sendBlockType2(std::vector<bitset> &lzssData, bool last) {
     // Send common header fields
@@ -100,35 +121,38 @@ void GzipEncoder::sendBlockType2(std::vector<bitset> &lzssData, bool last) {
 
     // Get the dynamic codes to use
     const auto lengths = getDynamicCodeLengths(lzssData);
-    const auto llCodeLengths = lengths.first;
-    const auto distCodeLengths = lengths.second;
+    auto llCodeLengths = lengths.first;
+    auto distCodeLengths = lengths.second;
     const auto llCode = constructCanonicalCode(llCodeLengths);
     const auto distCode = constructCanonicalCode(distCodeLengths);
 
     // Compute the CL code and metadata
+//    auto llCodeLengthCount = llCodeLengths.size() - countTrailingZeros(llCodeLengths);
+//    auto distCodeLengthCount = distCodeLengths.size() - countTrailingZeros(distCodeLengths);
+    removeTrailingZeros(llCodeLengths);
+    removeTrailingZeros(distCodeLengths);
     auto clSymbols = getCLSymbols(llCodeLengths, distCodeLengths);
     auto clCodeLengths = getCLCodeLengths(clSymbols);
     auto clCode = constructCanonicalCode(clCodeLengths);
 
     // There needs to be at least one use of symbol 256 (EOB), so there must be at least 257 elements
     assert(llCodeLengths.size() >= 257);
-    u32 HLIT = llCodeLengths.size() - 257; // todo optimize these for trailing zeros. May need to do so before getting CL code.
+    u32 HLIT = llCodeLengths.size() - 257;
     u32 HDIST = distCodeLengths.empty() ? 0 : distCodeLengths.size() - 1;
 
-    // todo compute HCLEN properly
-    u32 HCLEN = 15; // = 19 - 4 (since we will provide 19 CL codes, whether or not they get used)
+    // The lengths are written in a strange order, dictated by RFC 1951
+    const std::vector<u32> clPermutation {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15};
+    const u32 trailingCLZeros = countTrailingZeros(clCodeLengths, clPermutation);
+    const u32 clCodesUsed = std::max( (u32)clCodeLengths.size() - trailingCLZeros, 4u);
+    u32 HCLEN = clCodesUsed - 4;
 
     // These are all numbers so Rule #1 applies
     this->outBitStream.push_bits(HLIT, 5);
     this->outBitStream.push_bits(HDIST,5);
     this->outBitStream.push_bits(HCLEN,4);
 
-    // The lengths are written in a strange order, dictated by RFC 1951
-    const std::vector<u32> clPermutation {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15};
-
     // Push each CL code length in 3 bits (Rule #1 applies).
-    assert(HCLEN + 4 == 19);
-    for (unsigned int i = 0; i < HCLEN + 4; i++) {
+    for (unsigned int i = 0; i < clCodesUsed; ++i) {
         auto len = clCodeLengths.at(clPermutation.at(i));
         this->outBitStream.push_bits(len,3);
     }
@@ -139,7 +163,6 @@ void GzipEncoder::sendBlockType2(std::vector<bitset> &lzssData, bool last) {
         bool isCLSymbol = bits == 4 || bits == 5; // Otherwise it must be an offset portion of an RLE sequence
 
         if (isCLSymbol) {
-            // RLE literal or
             const auto codeWord = clCode.at(item.to_ulong());
             pushMsbFirst(codeWord);
         }
@@ -148,8 +171,11 @@ void GzipEncoder::sendBlockType2(std::vector<bitset> &lzssData, bool last) {
             this->outBitStream.push_bits(item);
         }
     }
-    // todo once we've updated the HXXX fields, we may have to check if the distance code table is empty and ensure that we're
-    //          still sending one code length
+    if (distCodeLengths.empty()) {
+        // Push a single length for the distance code
+        // how many bits do I use for this?
+        this->outBitStream.push_bits(0,1);
+    }
 
     // send the actual block content
     sendLzssOutput(lzssData, llCode, distCode);

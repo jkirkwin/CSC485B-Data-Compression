@@ -357,8 +357,6 @@ void appendCLRun(u32 len, u32 times, std::vector<bitset>& result) {
  * Appends the CL symbols for the given lengths to the result vector.
  */
 void appendCLSymbols(const std::vector<u32> &lengths, std::vector<bitset>& result) {
-    const auto literalBits = 4;
-
     // For each length, determine the appropriate symbol and check if we can use RLE.
     u32 prev = lengths.at(0); // the last length found
     u32 count = 1; // the number of times we've seen prev
@@ -380,8 +378,12 @@ void appendCLSymbols(const std::vector<u32> &lengths, std::vector<bitset>& resul
 std::vector<bitset> getCLSymbols(const std::vector<u32> &llCodeLengths, const std::vector<u32> &distCodeLengths) {
     // Runs overlapping the two length tables will not be encoded for the sake of simplicity
     std::vector<bitset> result;
-    appendCLSymbols(llCodeLengths, result);
-    appendCLSymbols(distCodeLengths, result);
+    if (!llCodeLengths.empty()) {
+        appendCLSymbols(llCodeLengths, result);
+    }
+    if (!distCodeLengths.empty()) {
+        appendCLSymbols(distCodeLengths, result);
+    }
     return result;
 }
 
