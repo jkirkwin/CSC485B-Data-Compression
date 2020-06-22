@@ -2,6 +2,7 @@
 #include "lzss_backref.h"
 #include <queue>
 #include <utility>
+#include <set>
 
 namespace package_merge {
 
