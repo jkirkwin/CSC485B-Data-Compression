@@ -87,4 +87,5 @@ Please excuse the difference in naming conventions etc between Bill's code, mine
     * For type 2 blocks, the CL code RLE functionality is used and the CL Prefix code is generated dynamically. HLIT, 
     HDIST and HCLEN are all used to decrease overhead as well.
     * As discussed above, I do some optimization to choose block types, but I don't do anything clever to choose sizes.
-* TODO compare performance to GZIP -1
+    * I didn't quite do better than `gzip -1` on the provided test files but my encoder's performance is comparable on 
+    all of them (and better on 8 of the 34) and runs in under 15 seconds on the reference server.
