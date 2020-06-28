@@ -37,3 +37,7 @@
 
 # Python
 **/venv
+
+# Misc
+*/**/gzstat
+uvzz/test_data
