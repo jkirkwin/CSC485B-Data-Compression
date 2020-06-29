@@ -7,6 +7,5 @@
 
 int main() {
     std::cout << rle::foo() << std::endl;
-    std::cout << bwt::bar() << std::endl;
     return 0;
 }

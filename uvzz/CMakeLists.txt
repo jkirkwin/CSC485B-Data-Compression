@@ -17,6 +17,6 @@ add_subdirectory(bwt)
 
 # Compress and Decompress utilities
 add_executable(uvzz_compress uvzz_compress.cpp)
-target_link_libraries(uvzz_compress rle_lib bwt_lib)
+target_link_libraries(uvzz_compress rle_lib)
 
 add_executable(uvzz_decompress uvzz_decompress.cpp)
