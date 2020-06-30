@@ -7,13 +7,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(BOOST_ROOT "/usr/include/boost")
 find_package(Boost)
 
-# Add common directories
-include_directories(catch)
-include_directories(include)
+# Add include directories
+include_directories(catch) # Catch2 testing library
+include_directories(include) # Common utilities
 
 # Add sub-modules
-add_subdirectory(rle)
-add_subdirectory(bwt)
+add_subdirectory(rle) # Run Length encoding
+add_subdirectory(bwt) # Burrows-Wheeler transform
+add_subdirectory(mtf) # Move to Front transform
 
 # Compress and Decompress utilities
 add_executable(uvzz_compress uvzz_compress.cpp)

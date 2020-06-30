@@ -14,6 +14,8 @@ Each block is then passed through each stage of the pipeline:
 ## Implementation
 
 __todo__ Document and justify the algorithms and approaches used for each pipeline component.
+- Document mtf implementation decisions/design
+
 
 ## Bitstream
 
@@ -26,3 +28,6 @@ __todo__ Design and document a bitstream that carries all necessary metadata and
 ## Sources
 
 __todo__ add all sources used as we go.
+
+https://en.wikipedia.org/wiki/Move-to-front_transform
+
