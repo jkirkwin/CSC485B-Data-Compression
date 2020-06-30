@@ -1,7 +1,7 @@
 # Assignment 3 - Custom Compression Pipeline (`uvzz`)
 
 ## Compression Pipeline Design
-The pipeline implemeneted here is based on and aims to out-perform BZip2.
+The pipeline implemented here is based on and aims to out-perform BZip2.
 
 Data is read in blocks of a fixed size. 
 Each block is then passed through each stage of the pipeline:
@@ -14,8 +14,13 @@ Each block is then passed through each stage of the pipeline:
 ## Implementation
 
 __todo__ Document and justify the algorithms and approaches used for each pipeline component.
-- Document mtf implementation decisions/design
 
+### Move-to-Front 
+The Move-to-Front transform implementation (see `mtf/mtf.cpp`) is very simple. I opted to use an array-based index table
+to increase the locality of the memory needed compared to a `std::list` in the hopes of better cache performance. A list
+would have improved the speed of the interior deletions at the cost of increased time to traverse and find the element 
+to delete when moving a symbol to the front of the table. The actual implementation is very simple and can be understood
+easily from the code and inline documentation.
 
 ## Bitstream
 
@@ -29,5 +34,5 @@ __todo__ Design and document a bitstream that carries all necessary metadata and
 
 __todo__ add all sources used as we go.
 
+### Move-to-Front
 https://en.wikipedia.org/wiki/Move-to-front_transform
-
