@@ -22,6 +22,9 @@ would have improved the speed of the interior deletions at the cost of increased
 to delete when moving a symbol to the front of the table. The actual implementation is very simple and can be understood
 easily from the code and inline documentation.
 
+### RLE
+__todo__
+
 ## Bitstream
 
 __todo__ Design and document a bitstream that carries all necessary metadata and the final encoded data stream.
@@ -29,6 +32,16 @@ __todo__ Design and document a bitstream that carries all necessary metadata and
 - Use CRC?
 - Need BWT index
 - May need arithmetic coding freq table depending on design choices (e.g. dynamic vs not)
+- Should RLE output be byte-oriented in order to improve arithmetic coding? We need to be using some sort of symbols for this.
+    - What about using an escape sequence followed by a run length
+        - Decompressor would know when to kick out and interpret a length field directly 
+            - if arithmetic decoder yields N consecutive zeros, call some function to pull bits from the stream until 
+            length field is terminated.
+                - this couples the arithmetic decoder to RLE but removes the need for a 
+- 
+
+### RLE
+__todo__
 
 ## Sources
 
