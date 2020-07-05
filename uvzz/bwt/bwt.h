@@ -27,37 +27,25 @@ namespace bwt {
     /**
      * The last column of the sorted BWT matrix and the index of the entry in
      * that column that comes from the un-shifted input data string.
-     * @tparam V The type of data that was encoded.
      */
-    template <class V>
     struct BwtResult {
-        const std::vector<V>& data;
+        const std::vector<u8>& data;
         const u32 index;
     };
 
     /**
      * Performs the Burrows-Wheeler Transform on the given input data.
-     * @tparam V The type of input data
      * @param input A vector of input data.
      * @return A BwtResult.
      */
-    template <class V>
-    BwtResult<V> encode(const std::vector<V>& input) {
-        // todo stub
-        return {input, 0};
-    }
+    BwtResult encode(const std::vector<u8>& input);
 
      /**
       * Reverses the Burrows-Wheeler transform to produce the original data.
-      * @tparam V The type of data that was transformed
       * @param bwtResult The output of a Burrows-Wheeler transform.
       * @return The original input data.
       */
-    template <class V>
-    std::vector<V> decode(const BwtResult<V>& bwtResult) {
-        // todo stub
-        return bwtResult.data;
-    }
+    std::vector<u8> decode(const BwtResult& bwtResult);
 }
 
 #endif //UVZZ_BWT_H

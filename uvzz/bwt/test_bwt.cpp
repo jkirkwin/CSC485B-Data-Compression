@@ -17,11 +17,11 @@ TEST_CASE("Decoding gives expected result", "[bwt] [decode]") {
 }
 
 TEST_CASE("Smoke test", "[bwt] [encode] [decode]") {
-    std::vector<u32> input;
-    const int limit = 100;
+    std::vector<u8> input;
+    const int limit = 255;
     for (int i = 0; i < limit; ++i) {
-        input.push_back(i);
-        input.push_back(i+1);
+        input.push_back((u8)i);
+        input.push_back((u8)(i+1));
         const auto result = bwt::decode(bwt::encode(input));
         REQUIRE(input == result);
     }
