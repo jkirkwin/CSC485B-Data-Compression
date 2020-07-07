@@ -29,9 +29,15 @@ namespace bwt {
      * that column that comes from the un-shifted input data string.
      */
     struct BwtResult {
-        const std::vector<u8>& data;
+        BwtResult(const std::vector<u8>& data, u32 index): data(data), index(index) {
+        }
+        const std::vector<u8> data;
         const u32 index;
     };
+
+    inline bool operator==(const BwtResult& first, const BwtResult& second) {
+        return first.index == second.index && first.data == second.data;
+    }
 
     /**
      * Performs the Burrows-Wheeler Transform on the given input data.
