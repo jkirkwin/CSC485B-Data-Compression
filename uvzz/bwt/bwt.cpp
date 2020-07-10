@@ -1,5 +1,6 @@
 #include "bwt.h"
 #include "binary.h"
+#include <functional>
 
 namespace bwt {
 
