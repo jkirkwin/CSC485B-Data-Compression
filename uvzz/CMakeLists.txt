@@ -18,6 +18,15 @@ add_subdirectory(mtf) # Move to Front transform
 
 # Compress and Decompress utilities
 add_executable(uvzz_compress uvzz_compress.cpp)
+target_link_libraries(uvzz_compress bwt_lib)
+target_link_libraries(uvzz_compress mtf_lib)
 target_link_libraries(uvzz_compress rle_lib)
 
 add_executable(uvzz_decompress uvzz_decompress.cpp)
+target_link_libraries(uvzz_decompress bwt_lib)
+target_link_libraries(uvzz_decompress mtf_lib)
+target_link_libraries(uvzz_decompress rle_lib)
+
+# Add meta-target for convenience
+add_custom_target(uvzz)
+add_dependencies(uvzz uvzz_compress uvzz_decompress)
