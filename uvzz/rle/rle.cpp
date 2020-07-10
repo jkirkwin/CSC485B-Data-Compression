@@ -153,7 +153,7 @@ namespace rle::vb {
                 for (int j = 0; j < continuation; ++j) {
                     result.push_back(prev);
                 }
-                repeats = 0;
+                currentRun = 0;
             }
             else {
                 auto nextByte = encoded.at(i);

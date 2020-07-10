@@ -54,7 +54,7 @@ namespace binary::vb {
             else {
                 assert( (byte & FLAG) == FLAG );
             }
-            auto next7 = byte & FLAG;
+            auto next7 = byte & MASK;
             result = (result << 7u) | next7;
         }
        return result;

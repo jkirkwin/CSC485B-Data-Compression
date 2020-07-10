@@ -16,6 +16,34 @@ std::vector<dec_enc_pair> pairs {
         { 1000, bitset(20, 0b11111111110111101000u) } // 1000 = 0b1111101000
 };
 
+TEST_CASE("Smoke test variable byte RLE", "[vb] [rle] [decode] [encode]") {
+    std::vector<u8> input {};
+    int repeatThreshold = 4;
+    // Minimal run to require length field
+    for (int i = 0; i < repeatThreshold; ++i) {
+        input.push_back(1);
+    }
+    // String of non-repeating characters
+    for (int i = 0; i < 100; ++i) {
+        input.push_back(i);
+    }
+    // Repeated chars without length field
+    for (int i = 0; i < repeatThreshold-1; ++i) {
+        input.push_back(2);
+    }
+    // Long sequence of repetitions
+    for (int i = 0; i < 10; ++i) {
+        input.push_back(0xFF);
+    }
+    // Add one more for fun
+    input.push_back(8);
+
+    auto encoded = rle::vb::encode(input, repeatThreshold);
+    assert (encoded.size() < input.size());
+    auto result = rle::vb::decode(encoded, repeatThreshold);
+    REQUIRE(input == result);
+}
+
 TEST_CASE("Test encode length", "[rle] [encode]") {
     for (const auto& pair : pairs) {
         REQUIRE(rle::symbolFromLength(pair.first) == pair.second);
