@@ -1,5 +1,6 @@
 #include "rle.h"
 #include <cassert>
+#include "binary.h"
 
 namespace rle {
 
@@ -81,6 +82,91 @@ namespace rle {
             result.push_back(true);
         }
 
+        return result;
+    }
+}
+
+namespace rle::vb {
+
+    void pushLength(u32 length, byte_vec& resultBuffer) {
+        auto encodedLen = binary::vb::encode(length);
+        for (auto b : encodedLen) {
+            resultBuffer.push_back(b);
+        }
+    }
+
+    byte_vec getLengthBytes(const byte_vec& buffer, int startIndex) {
+        byte_vec result{};
+        auto flag = binary::vb::FLAG;
+        for (int i = startIndex; i < buffer.size(); ++i) {
+            auto nextByte = buffer.at(i);
+            result.push_back(nextByte);
+            if ( (nextByte & flag) == 0) {
+                break; // Last byte int the length field was found.
+            }
+        }
+        return result;
+    }
+
+    byte_vec encode(const byte_vec& input, int repeats) {
+        auto currentRun = 0;
+        u16 prevByte = -1; // begin with a value that cannot be present in the input
+        byte_vec result {};
+        for (const auto byte : input) {
+            if (byte == prevByte) {
+                if (currentRun < repeats) {
+                    result.push_back(byte);
+                }
+                ++currentRun;
+            }
+            else {
+                if (currentRun >= repeats) {
+                    auto len = currentRun - repeats;
+                    vb::pushLength(len, result);
+                }
+                result.push_back(byte);
+                prevByte = byte;
+                currentRun = 1;
+            }
+        }
+        if (currentRun >= repeats) {
+            vb::pushLength(currentRun - repeats, result);
+        }
+        return result;
+    }
+
+    byte_vec decode(const byte_vec& encoded, int repeats) {
+        assert (repeats > 1);
+
+        u32 currentRun {0};
+        u16 prev = -1; // Use a value than cannot occur in the input vector
+        byte_vec result {};
+
+        for (u32 i = 0; i < encoded.size(); ++i) {
+            if (currentRun == repeats) {
+                // Expect a length encoding here
+                auto lengthField = getLengthBytes(encoded, i);
+                assert (! lengthField.empty());
+                i += lengthField.size() - 1; // -1 because I will be incremented in loop test above
+
+                u32 continuation = binary::vb::decode(lengthField);
+                for (int j = 0; j < continuation; ++j) {
+                    result.push_back(prev);
+                }
+                repeats = 0;
+            }
+            else {
+                auto nextByte = encoded.at(i);
+                if (nextByte == prev) {
+                    ++currentRun;
+                }
+                else {
+                    prev = nextByte;
+                    currentRun = 1;
+                }
+                result.push_back(nextByte);
+            }
+        }
         return result;
     }
 }

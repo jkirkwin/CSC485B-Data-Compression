@@ -112,4 +112,29 @@ namespace rle {
     u32 lengthFromSymbol(const bitset& lenSymbol);
 }
 
+/**
+ * Alternate variable-byte rle encoding functions. These are useful for
+ * performing generic RLE where the output should remain byte-oriented.
+ *
+ * A similar scheme is followed here wherein continuation lengths are
+ * encoded only after seeing some number of repetitions of an input byte.
+ */
+namespace rle::vb {
+    typedef std::vector<u8> byte_vec;
+
+    /**
+     * @param input The bytes to perform RLE on.
+     * @param repeats The minimum run length after which to encode a length field.
+     * @return The encoded result.
+     */
+    byte_vec encode(const byte_vec& input, int repeats=3);
+
+    /**
+     * @param encoded The encoded RLE result.
+     * @param repeats The minimum run length after which to decode a length field.
+     * @return The decoded result.
+     */
+    byte_vec decode(const byte_vec& encoded, int repeats=3);
+}
+
 #endif
