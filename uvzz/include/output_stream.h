@@ -100,12 +100,13 @@ public:
             output_byte();
     }
 
-    /* Flush the currently stored bits to the output stream */
-    void flush_to_byte(){
-        if (numbits > 0)
-            output_byte();
+    /* Flush the currently stored bits to the output stream
+    The value of fill_bit is used for any padding bits emitted. */
+    void flush_to_byte(u32 fill_bit = 0){
+        while(numbits != 0) {
+            push_bit(fill_bit);
+        }
     }
-
 
 private:
     void output_byte(){

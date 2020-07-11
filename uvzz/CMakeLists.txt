@@ -15,6 +15,7 @@ include_directories(include) # Common utilities
 add_subdirectory(rle) # Run Length encoding
 add_subdirectory(bwt) # Burrows-Wheeler transform
 add_subdirectory(mtf) # Move to Front transform
+add_subdirectory(arith) # Arithmetic coding
 add_subdirectory(include) # Common utility tests
 
 # Compress and Decompress utilities
@@ -22,6 +23,8 @@ add_executable(uvzz_compress uvzz_compress.cpp)
 target_link_libraries(uvzz_compress bwt_lib)
 target_link_libraries(uvzz_compress mtf_lib)
 target_link_libraries(uvzz_compress rle_lib)
+
+# todo add arithmetic lib to these targets
 
 add_executable(uvzz_decompress uvzz_decompress.cpp)
 target_link_libraries(uvzz_decompress bwt_lib)
