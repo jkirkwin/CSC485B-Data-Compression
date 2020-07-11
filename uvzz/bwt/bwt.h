@@ -52,6 +52,10 @@ namespace bwt {
       * @return The original input data.
       */
     std::vector<u8> decode(const BwtResult& bwtResult);
+
+    inline std:: vector<u8> decode(const std::vector<u8>& data, u32 index) {
+        return decode({data, index});
+    }
 }
 
 #endif //UVZZ_BWT_H
