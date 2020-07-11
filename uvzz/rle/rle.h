@@ -120,6 +120,8 @@ namespace rle {
  * encoded only after seeing some number of repetitions of an input byte.
  */
 namespace rle::vb {
+    const u32 REPEATS_DEFAULT = 3;
+
     typedef std::vector<u8> byte_vec;
 
     /**
@@ -127,14 +129,14 @@ namespace rle::vb {
      * @param repeats The minimum run length after which to encode a length field.
      * @return The encoded result.
      */
-    byte_vec encode(const byte_vec& input, int repeats=3);
+    byte_vec encode(const byte_vec& input, u32 repeats=REPEATS_DEFAULT);
 
     /**
      * @param encoded The encoded RLE result.
      * @param repeats The minimum run length after which to decode a length field.
      * @return The decoded result.
      */
-    byte_vec decode(const byte_vec& encoded, int repeats=3);
+    byte_vec decode(const byte_vec& encoded, u32 repeats=REPEATS_DEFAULT);
 }
 
 #endif

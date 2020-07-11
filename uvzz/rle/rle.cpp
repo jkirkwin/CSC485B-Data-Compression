@@ -108,7 +108,7 @@ namespace rle::vb {
         return result;
     }
 
-    byte_vec encode(const byte_vec& input, int repeats) {
+    byte_vec encode(const byte_vec& input, u32 repeats) {
         auto currentRun = 0;
         u16 prevByte = -1; // begin with a value that cannot be present in the input
         byte_vec result {};
@@ -135,7 +135,7 @@ namespace rle::vb {
         return result;
     }
 
-    byte_vec decode(const byte_vec& encoded, int repeats) {
+    byte_vec decode(const byte_vec& encoded, u32 repeats) {
         assert (repeats > 1);
 
         u32 currentRun {0};
