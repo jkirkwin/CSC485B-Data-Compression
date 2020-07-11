@@ -67,7 +67,7 @@ TEST_CASE("Test encode sequence", "[rle] [encode]") {
     std::vector<u8> input {};
     std::vector<rle::Symbol> expected {};
     SECTION("No runs") {
-        input =  {0, 1, 0, 0, 2};
+        input =  {0, 1, 0, 3, 2};
         for (u8 byte : input) {
             expected.push_back(rle::Symbol(byte));
         }
