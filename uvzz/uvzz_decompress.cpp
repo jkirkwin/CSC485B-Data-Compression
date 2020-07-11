@@ -122,7 +122,7 @@ bool verifyFileType(InputBitStream& inputBitStream) {
 }
 
 int main() {
-    std::cerr << "Decoding (RLE1 & BWT only)" << std::endl;
+    std::cerr << "Decoding (RLE1, BWT, MTF)" << std::endl;
 
     // todo remove this once debugging is over
 //    const auto filename = "/home/jamie/csc485/CSC485B-Data-Compression/uvzz/harbour.zz";
