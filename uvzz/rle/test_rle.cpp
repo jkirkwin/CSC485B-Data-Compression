@@ -1,6 +1,10 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include "rle.h"
+#include <fstream>
+#include "constants.h"
+#include "output_stream.h"
+#include "input_stream.h"
 
 typedef std::pair<u32, bitset> dec_enc_pair;
 
@@ -93,4 +97,25 @@ TEST_CASE("Test encode sequence", "[rle] [encode]") {
     }
     const auto result = rle::encode(input);
     REQUIRE(result == expected);
+}
+
+TEST_CASE("Decode length from bitstream", "[decode]") {
+    // Create a dummy file to write to
+    const auto filepath = "/tmp/uvzz_test_rle.bin";
+
+    for (u32 length = 0; length < BLOCK_SIZE * 2; ++length) {
+        std::ofstream fOut(filepath);
+        auto lengthField = rle::symbolFromLength(length);
+        OutputBitStream outStream(fOut);
+        outStream.push_bits_msb_first(lengthField);
+        outStream.flush_to_byte();
+        fOut.close();
+
+        std::ifstream fIn(filepath);
+        InputBitStream inStream(fIn);
+        auto resultLength = rle::readLengthFromBitstream(inStream);
+        fIn.close();
+
+        REQUIRE (length == resultLength);
+    }
 }

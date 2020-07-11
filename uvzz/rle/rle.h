@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 #include "binary.h"
+#include "input_stream.h"
 
 /**
  * RLE stands for Run Length Encoding: a simple encoding scheme template by
@@ -39,27 +40,27 @@
  * </pre>
  */
 namespace rle {
-    const u32 CONTINUATION_THRESHOLD = 4; // todo revisit this and determine the best value to use.
+    const u32 CONTINUATION_THRESHOLD = 2;
 
     /**
      * A simple tagged union representing a possible output of the RLE encoding process.
      */
     class Symbol {
     public:
-        explicit Symbol(u8 literal): literal(literal), active(&this->literal){
+        explicit Symbol(u8 literal): literal(literal), isLen(false){
 
         }
 
-        explicit Symbol(bitset length): length(std::move(length)), active(&this->length) {
+        explicit Symbol(bitset length): length(std::move(length)), isLen(true) {
 
         }
 
         bool isLiteral() const {
-            return active == &literal;
+            return !isLength();
         }
 
         bool isLength() const {
-            return !isLiteral();
+            return isLen;
         }
 
         u8 getLiteral() const {
@@ -75,7 +76,7 @@ namespace rle {
     private:
         u8 literal{};
         bitset length;
-        void* active;
+        bool isLen;
     };
 
     inline bool operator==(const Symbol& s1, const Symbol& s2) {
@@ -98,11 +99,26 @@ namespace rle {
     std::vector<Symbol> encode(const std::vector<u8>& rawData);
 
     /**
+     * Decode the given symbol sequence to a sequence of bytes.
+     * @param encodedData The encoded data to be interpreted.
+     * @return The raw decoded data.
+     */
+    std::vector<u8> decode(const std::vector<Symbol>& encodedData);
+
+    /**
      * Convert the given length into an encoded length field.
      * @param length The run length to be encoded.
      * @return The encoded length symbol.
      */
     bitset symbolFromLength(u32 length);
+
+
+    /**
+     * Convert an encoded length field into a numeric value.
+     * @param lenSymbol The encoded length field.
+     * @return The decoded length value.
+     */
+    u32 lengthFromSymbol(const Symbol& lenSymbol);
 
     /**
      * Convert an encoded length field into a numeric value.
@@ -110,6 +126,14 @@ namespace rle {
      * @return The decoded length value.
      */
     u32 lengthFromSymbol(const bitset& lenSymbol);
+
+    /**
+     * Reads a length field from the beginning of the given bitstream and
+     * converts it to a numerical value.
+     * @param inStream A input stream holding a length field
+     * @return The numerical representation of the length read.
+     */
+    u32 readLengthFromBitstream(InputBitStream& inStream);
 }
 
 /**

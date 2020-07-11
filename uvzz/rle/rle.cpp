@@ -43,6 +43,28 @@ namespace rle {
         return result;
     }
 
+    std::vector<u8> decode(const std::vector<Symbol>& encodedData) {
+        std::vector<u8> result {};
+        for (const auto& symbol : encodedData) {
+            if (symbol.isLiteral()) {
+                result.push_back(symbol.getLiteral());
+            }
+            else {
+                assert (symbol.isLength());
+                auto len = lengthFromSymbol(symbol);
+                for (int i = 0; i < len; ++i) {
+                    result.push_back(0);
+                }
+            }
+        }
+        return result;
+    }
+
+    u32 lengthFromSymbol(const Symbol& lenSymbol) {
+        assert (lenSymbol.isLength());
+        return lengthFromSymbol(lenSymbol.getLength());
+    }
+
     u32 lengthFromSymbol(const bitset& lenSymbol) {
         // Special case: length of 0
         if (lenSymbol.size() == 1) {
@@ -83,6 +105,30 @@ namespace rle {
         }
 
         return result;
+    }
+
+    u32 readLengthFromBitstream(InputBitStream& inStream) {
+        auto unaryCount {0};
+        while (inStream.read_bit() == 1) {
+            ++unaryCount;
+        }
+        if (unaryCount == 0) {
+            return 0;
+        }
+        else {
+            // Find and push the explicit binary field
+            auto explicitBitCount = unaryCount - 1;
+            auto explicitBits = inStream.read_bits_msb_first(explicitBitCount);
+            bitset lengthField(explicitBitCount, explicitBits);
+
+            // add the unary encoding
+            lengthField.push_back(false);
+            for (int i = 0; i < unaryCount; ++i) {
+                lengthField.push_back(true);
+            }
+
+            return lengthFromSymbol(lengthField);
+        }
     }
 }
 

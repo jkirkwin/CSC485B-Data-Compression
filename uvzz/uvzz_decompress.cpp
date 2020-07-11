@@ -11,12 +11,12 @@ struct BadFileTypeException : std::exception {
 struct UnexpectedEndOfInput : std::exception {
 };
 
-std::vector<u8> decodeRleBlock(InputBitStream& inStream) {
+std::vector<u8> decodeRleBlock(InputBitStream& inStream, u32 blockSize) {
     std::vector<u8> block{};
-    block.reserve(BLOCK_SIZE);
+    block.reserve(blockSize);
 
     u32 currentRun{0};
-    while (block.size() < BLOCK_SIZE) {
+    while (block.size() < blockSize) {
         if (currentRun == rle::CONTINUATION_THRESHOLD) {
             // A length field comes next
             auto length = rle::readLengthFromBitstream(inStream);
@@ -40,6 +40,13 @@ std::vector<u8> decodeRleBlock(InputBitStream& inStream) {
             }
             block.push_back(literal);
         }
+    }
+    if (currentRun == rle::CONTINUATION_THRESHOLD) {
+        // A final length field, which should be 0 since we already have the entire block.
+        // todo change the encoder so that this bit isn't wasted.
+        auto length = rle::readLengthFromBitstream(inStream);
+        assert (! inStream.input_depleted()); // Runs should never cross block boundaries
+        assert (length == 0);
     }
     return block;
 }
@@ -88,27 +95,30 @@ std::vector<u8> getRawDataBlock(InputBitStream& inputBitStream) {
     auto bwtIndex = getBwtIndex(inputBitStream);
     auto blockSize = getBwtSize(inputBitStream, bwtIndex);
 
-    // Pull out the encoded block
-    std::vector<u8> block {};
-    block.reserve(blockSize);
-    while (block.size() < blockSize) {
-        auto nextByte = inputBitStream.read_byte();
-        block.push_back(nextByte);
-
-        assert (! inputBitStream.input_depleted());
-    }
+//    // Pull out the encoded block
+//    std::vector<u8> block {};
+//    block.reserve(blockSize);
+//    while (block.size() < blockSize) {
+//        auto nextByte = inputBitStream.read_byte();
+//        block.push_back(nextByte);
+//
+//        assert (! inputBitStream.input_depleted());
+//    }
 
     // todo add in the rest of the pipeline here.
 
+    // Decode a block of data with the specialized RLE2 algorithm
+    const auto specializedRleDecoded = decodeRleBlock(inputBitStream, blockSize);
+
     // Invert the MTF transform
-    const auto mtfDecoded = mtf::invert(block);
+    const auto mtfDecoded = mtf::invert(specializedRleDecoded);
 
     // Invert the BWT
     const auto bwtDecoded = bwt::decode(mtfDecoded, bwtIndex);
 
     // Invert RLE1 and return the decoded block
-    auto rleDecoded = rle::vb::decode(bwtDecoded);
-    return rleDecoded;
+    auto vbRleDecoded = rle::vb::decode(bwtDecoded);
+    return vbRleDecoded;
 }
 
 void printRawData(const std::vector<u8>& rawData) {
@@ -122,7 +132,7 @@ bool verifyFileType(InputBitStream& inputBitStream) {
 }
 
 int main() {
-    std::cerr << "Decoding (RLE1, BWT, MTF)" << std::endl;
+    std::cerr << "Decoding (RLE1, BWT, MTF, RLE2)" << std::endl;
 
     // todo remove this once debugging is over
 //    const auto filename = "/home/jamie/csc485/CSC485B-Data-Compression/uvzz/harbour.zz";

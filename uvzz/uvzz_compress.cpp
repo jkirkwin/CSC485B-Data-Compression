@@ -42,6 +42,18 @@ void writeBwtOverhead(OutputBitStream& out, const bwt::BwtResult& bwtResult) {
     writeVbEncoding(out, sizeDelta);
 }
 
+void pushRle2Result(const std::vector<rle::Symbol>& rle2Result, OutputBitStream& outputBitStream) {
+    for (const auto& symbol : rle2Result) {
+        if (symbol.isLiteral()) {
+            outputBitStream.push_byte(symbol.getLiteral());
+        }
+        else {
+            outputBitStream.push_bits_msb_first(symbol.getLength());
+        }
+    }
+}
+
+
 void encode(const std::vector<u8>& block, OutputBitStream& outputBitStream) {
     // Run RLE1 and push the size of the resulting block
     const auto vbRleResult = rle::vb::encode(block);
@@ -53,9 +65,11 @@ void encode(const std::vector<u8>& block, OutputBitStream& outputBitStream) {
     // Run MTF on the BWT block
     const auto mtfResult = mtf::transform(bwtResult.data);
 
-    // todo add the rest of the pipeline here.
+    // Run specialized RLE2
+    auto rle2Result = rle::encode(mtfResult);
+    pushRle2Result(rle2Result, outputBitStream);
 
-    outputBitStream.push_bytes(mtfResult);
+    // todo add the rest of the pipeline here.
 }
 
 void sendMagicNumber(OutputBitStream& outputBitStream) {
@@ -63,7 +77,7 @@ void sendMagicNumber(OutputBitStream& outputBitStream) {
 }
 
 int main() {
-    std::cerr << "Encoding (RLE1, BWT, MTF)" << std::endl;
+    std::cerr << "Encoding (RLE1, BWT, MTF, RLE2)" << std::endl;
 
     // todo remove this once debugging is over
 //    const auto filename = "/home/jamie/csc485/CSC485B-Data-Compression/uvzz/as.txt";
