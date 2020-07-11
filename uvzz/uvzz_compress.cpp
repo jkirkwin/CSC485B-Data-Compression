@@ -43,8 +43,6 @@ void writeBwtOverhead(OutputBitStream& out, const bwt::BwtResult& bwtResult) {
 }
 
 void encode(const std::vector<u8>& block, OutputBitStream& outputBitStream) {
-    // todo add the rest of the pipeline here.
-
     // Run RLE1 and push the size of the resulting block
     const auto vbRleResult = rle::vb::encode(block);
 
@@ -52,7 +50,12 @@ void encode(const std::vector<u8>& block, OutputBitStream& outputBitStream) {
     const auto bwtResult = bwt::encode(vbRleResult);
     writeBwtOverhead(outputBitStream, bwtResult);
 
-    outputBitStream.push_bytes(bwtResult.data);
+    // Run MTF on the BWT block
+    const auto mtfResult = mtf::transform(bwtResult.data);
+
+    // todo add the rest of the pipeline here.
+
+    outputBitStream.push_bytes(mtfResult);
 }
 
 void sendMagicNumber(OutputBitStream& outputBitStream) {

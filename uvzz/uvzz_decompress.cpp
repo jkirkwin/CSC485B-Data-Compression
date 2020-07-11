@@ -100,8 +100,11 @@ std::vector<u8> getRawDataBlock(InputBitStream& inputBitStream) {
 
     // todo add in the rest of the pipeline here.
 
+    // Invert the MTF transform
+    const auto mtfDecoded = mtf::invert(block);
+
     // Invert the BWT
-    auto bwtDecoded = bwt::decode(block, bwtIndex);
+    const auto bwtDecoded = bwt::decode(mtfDecoded, bwtIndex);
 
     // Invert RLE1 and return the decoded block
     auto rleDecoded = rle::vb::decode(bwtDecoded);
