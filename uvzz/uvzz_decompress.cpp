@@ -80,15 +80,15 @@ u32 getBwtSize(InputBitStream& inputBitStream, u32 bwtIndex) {
 }
 
 std::vector<u8> getRawDataBlock(InputBitStream& inputBitStream) {
-    // todo add in the rest of the pipeline here.
-
-    // Test the RLE1 phase in isolation
-    auto blockSize = decodeVbFromInStream(inputBitStream); // get the size of the next block
-
     if (inputBitStream.input_depleted()) {
         return {};
     }
 
+    // Get the bwt metadata
+    auto bwtIndex = getBwtIndex(inputBitStream);
+    auto blockSize = getBwtSize(inputBitStream, bwtIndex);
+
+    // Pull out the encoded block
     std::vector<u8> block {};
     block.reserve(blockSize);
     while (block.size() < blockSize) {
@@ -98,7 +98,13 @@ std::vector<u8> getRawDataBlock(InputBitStream& inputBitStream) {
         assert (! inputBitStream.input_depleted());
     }
 
-    auto rleDecoded = rle::vb::decode(block);
+    // todo add in the rest of the pipeline here.
+
+    // Invert the BWT
+    auto bwtDecoded = bwt::decode(block, bwtIndex);
+
+    // Invert RLE1 and return the decoded block
+    auto rleDecoded = rle::vb::decode(bwtDecoded);
     return rleDecoded;
 }
 
@@ -113,7 +119,7 @@ bool verifyFileType(InputBitStream& inputBitStream) {
 }
 
 int main() {
-    std::cerr << "Decoding (RLE1 only)" << std::endl;
+    std::cerr << "Decoding (RLE1 & BWT only)" << std::endl;
 
     // todo remove this once debugging is over
 //    const auto filename = "/home/jamie/csc485/CSC485B-Data-Compression/uvzz/harbour.zz";

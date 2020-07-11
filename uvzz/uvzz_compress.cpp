@@ -29,23 +29,30 @@ void writeVbEncoding(OutputBitStream& out, u32 n) {
 }
 
 /*
- * Send the variable-byte encoding of the bwt index to the output stream.
+ * Send the variable-byte/delta encoding of the bwt index and block size to the
+ * output stream.
  */
-void writeBwtOverhead(OutputBitStream& out, u32 bwtIndex, u32 size) {
+void writeBwtOverhead(OutputBitStream& out, const bwt::BwtResult& bwtResult) {
     // Encode and write the bwt index
-    writeVbEncoding(out, bwtIndex);
+    writeVbEncoding(out, bwtResult.index);
 
     // Encode and write the bwt block size (minus the bwt index)
-    const auto sizeDelta = size - bwtIndex;
+    const auto size = bwtResult.data.size();
+    const auto sizeDelta = size - bwtResult.index;
     writeVbEncoding(out, sizeDelta);
 }
 
 void encode(const std::vector<u8>& block, OutputBitStream& outputBitStream) {
     // todo add the rest of the pipeline here.
 
+    // Run RLE1 and push the size of the resulting block
     const auto vbRleResult = rle::vb::encode(block);
-    writeVbEncoding(outputBitStream, vbRleResult.size());
-    outputBitStream.push_bytes(vbRleResult);
+
+    // Run BWT and push the index and block size to be used
+    const auto bwtResult = bwt::encode(vbRleResult);
+    writeBwtOverhead(outputBitStream, bwtResult);
+
+    outputBitStream.push_bytes(bwtResult.data);
 }
 
 void sendMagicNumber(OutputBitStream& outputBitStream) {
@@ -53,7 +60,7 @@ void sendMagicNumber(OutputBitStream& outputBitStream) {
 }
 
 int main() {
-    std::cerr << "Encoding (RLE1 only)" << std::endl;
+    std::cerr << "Encoding (RLE1 & BWT only)" << std::endl;
 
     // todo remove this once debugging is over
 //    const auto filename = "/home/jamie/csc485/CSC485B-Data-Compression/uvzz/as.txt";
