@@ -11,8 +11,8 @@
    B. Bird - 06/19/2020
 */ 
 
-#ifndef OUTPUT_STREAM_HPP
-#define OUTPUT_STREAM_HPP
+#ifndef UVZZ_OUTPUT_STREAM_H
+#define UVZZ_OUTPUT_STREAM_H
 
 #include <iostream>
 #include <cstdint>
