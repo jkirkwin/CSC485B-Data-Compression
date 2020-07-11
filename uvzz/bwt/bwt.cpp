@@ -116,7 +116,39 @@ namespace bwt {
     }
 
     std::vector<u8> decode(const BwtResult& bwtResult) {
-        return {}; // todo stub
+        // variables here are mainly named as they are in the original BWT
+        // paper. See section 4.2 for details.
+
+        // todo check if we really need to be using u32s everywhere
+
+        auto L = bwtResult.data;
+
+        const auto alphabetSize = 256;
+        std::vector<u32> C(alphabetSize);
+        std::vector<u32> P(L.size());
+
+        for (int i = 0; i < P.size(); ++i) {
+            auto Li = L.at(i);
+            P.at(i) = C.at(Li);
+            C.at(Li)++;
+        }
+
+        auto sum {0};
+        for (u16 i = 0; i < alphabetSize; ++i) {
+            u8 ch = i;
+            sum += C.at(ch);
+            C.at(ch) = sum - C.at(ch);
+        }
+
+        auto i {bwtResult.index};
+        std::vector<u8> S(L.size());
+        for (long j = (long)L.size()-1; j >= 0; --j) {
+            auto Li = L.at(i);
+            S.at(j) = (Li);
+            i = P.at(i) + C.at(Li);
+        }
+
+        return S;
     }
 }
 
