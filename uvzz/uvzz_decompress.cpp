@@ -95,16 +95,6 @@ std::vector<u8> getRawDataBlock(InputBitStream& inputBitStream) {
     auto bwtIndex = getBwtIndex(inputBitStream);
     auto blockSize = getBwtSize(inputBitStream, bwtIndex);
 
-//    // Pull out the encoded block
-//    std::vector<u8> block {};
-//    block.reserve(blockSize);
-//    while (block.size() < blockSize) {
-//        auto nextByte = inputBitStream.read_byte();
-//        block.push_back(nextByte);
-//
-//        assert (! inputBitStream.input_depleted());
-//    }
-
     // todo add in the rest of the pipeline here.
 
     // Decode a block of data with the specialized RLE2 algorithm
@@ -132,12 +122,6 @@ bool verifyFileType(InputBitStream& inputBitStream) {
 }
 
 int main() {
-    std::cerr << "Decoding (RLE1, BWT, MTF, RLE2)" << std::endl;
-
-    // todo remove this once debugging is over
-//    const auto filename = "/home/jamie/csc485/CSC485B-Data-Compression/uvzz/harbour.zz";
-//    std::fstream f(filename);
-//    InputBitStream inputBitStream(f);
     InputBitStream inputBitStream;
 
     if (!verifyFileType(inputBitStream)) {

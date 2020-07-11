@@ -2,7 +2,6 @@
 #include "bwt/bwt.h"
 #include "mtf/mtf.h"
 #include "constants.h"
-#include <fstream>
 #include <iostream>
 #include <output_stream.h>
 
@@ -77,22 +76,13 @@ void sendMagicNumber(OutputBitStream& outputBitStream) {
 }
 
 int main() {
-    std::cerr << "Encoding (RLE1, BWT, MTF, RLE2)" << std::endl;
-
-    // todo remove this once debugging is over
-//    const auto filename = "/home/jamie/csc485/CSC485B-Data-Compression/uvzz/as.txt";
-//    std::fstream f(filename);
-//    std::stringstream f("777776");
-
     OutputBitStream outputBitStream;
 
     sendMagicNumber(outputBitStream);
 
-//    std::vector<u8> block = readBlock(BLOCK_SIZE, f);
     std::vector<u8> block = readBlock();
     while (! block.empty()) {
         encode(block, outputBitStream);
-//        block = readBlock(BLOCK_SIZE, f);
         block = readBlock();
     }
 
