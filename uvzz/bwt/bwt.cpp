@@ -56,7 +56,11 @@ namespace bwt {
     void sortIndexes(const std::vector<u8>& data, std::vector<u32>& indexes) {
         using namespace std::placeholders;
         auto compare = std::bind(compareIndexes, data, _1, _2);
-        std::sort(indexes.begin(), indexes.end(), compare);
+
+        // stable_sort consistently out-performs sort on the provided test data.
+        // This might be caused by sort using a quicksort implementation and
+        // stable_sort using some other algorithm.
+        std::stable_sort(indexes.begin(), indexes.end(), compare);
     }
 
     /*
