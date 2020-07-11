@@ -1,9 +1,13 @@
 # Assignment 3 - Custom Compression Pipeline (`uvzz`)
+Jamie Kirkwin
 
 ## Compression Pipeline Design
 The pipeline implemented here is based on and aims to out-perform BZip2. Unfortunately I wasn't actually able to meet 
 that goal. I think if I had managed an O(n) BWT implementation then I could have increased the block size enough to get 
 close, but no cigar this time.
+
+I also didn't end up having time to integrate Bill's arithmetic coding properly, so I left it out. The code is in an 
+almost unaltered form in `arith/arith.cpp`/`.h`
 
 Data is read in blocks of a fixed size. 
 Each block is then passed through each stage of the pipeline:
@@ -78,8 +82,7 @@ __todo__
         - Decompressor would know when to kick out and interpret a length field directly 
             - if arithmetic decoder yields N consecutive zeros, call some function to pull bits from the stream until 
             length field is terminated.
-                - this couples the arithmetic decoder to RLE but removes the need for a 
-- 
+                - this couples the arithmetic decoder to RLE but simplifies things otherwise
 
 ## Sources
 - Boost library
