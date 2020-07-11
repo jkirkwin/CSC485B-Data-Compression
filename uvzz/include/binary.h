@@ -30,7 +30,7 @@ namespace binary::vb {
 
         // get each set of 7 bits from n until we have read the most significant 1 bit.
         while (n>>7u > 0) {
-            n = n << 7u;
+            n = n >> 7u;
             u8 next = (n & MASK) | FLAG;
             result.push_back(next);
         }
@@ -48,12 +48,9 @@ namespace binary::vb {
         u32 result {0};
         for (int i = 0; i < encoded.size(); ++i) {
             auto byte = encoded.at(i);
-            if (i == encoded.size() - 1) {
-                assert( (byte & FLAG) == 0 );
-            }
-            else {
-                assert( (byte & FLAG) == FLAG );
-            }
+
+            assert ( (i == encoded.size() - 1) == ((byte & FLAG) == 0) );
+
             auto next7 = byte & MASK;
             result = (result << 7u) | next7;
         }

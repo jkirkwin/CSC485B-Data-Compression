@@ -15,6 +15,7 @@ include_directories(include) # Common utilities
 add_subdirectory(rle) # Run Length encoding
 add_subdirectory(bwt) # Burrows-Wheeler transform
 add_subdirectory(mtf) # Move to Front transform
+add_subdirectory(include) # Common utility tests
 
 # Compress and Decompress utilities
 add_executable(uvzz_compress uvzz_compress.cpp)
