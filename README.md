@@ -11,3 +11,6 @@ All programming assignments were done in c++.
 
 # Assignment 3 - Custom compression pipeline
 `uvzz/` holds an implementation of my own customized encoder and decoder.
+
+# Assignment 4 - Image compression
+`uvg/` holds an implementation of a JPEG-influenced DCT-based .bmp image compressor and decompressor.
