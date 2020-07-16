@@ -8,3 +8,6 @@ All programming assignments were done in c++.
 
 # Assignment 2 - DEFLATE
 `uvgz/` holds and implementation of the GZip encoder (using the DEFLATE algorithm).
+
+# Assignment 3 - Custom compression pipeline
+`uvzz/` holds an implementation of my own customized encoder and decoder.

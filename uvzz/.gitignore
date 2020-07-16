@@ -1,0 +1,5 @@
+cmake-build-debug/
+catch/
+*.log
+uvzz_compress
+uvzz_decompress
