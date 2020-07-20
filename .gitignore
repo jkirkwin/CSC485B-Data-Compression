@@ -39,6 +39,7 @@
 **/venv
 
 # Misc
-*/**/gzstat
-*/**/test_data
-catch/
+*/**/gzstat/
+*/**/test_data/
+*/**/catch/
+*/**/cmake-build-debug/
