@@ -34,13 +34,15 @@ int main(int argc, char** argv){
     std::string input_filename {argv[1]};
     std::string output_filename {argv[2]};
 
-
     std::ifstream input_file{input_filename,std::ios::binary};
     InputBitStream input_stream {input_file};
 
     unsigned int height = input_stream.read_u32();
     unsigned int width = input_stream.read_u32();
-    
+
+    // todo This is where we will need to add delta decompression and DCT inversion.
+    //      For the DCT we'll need the quality measure from the bit stream
+
     auto Y = create_2d_vector<unsigned char>(height,width);
     auto Cb_scaled = create_2d_vector<unsigned char>((height+1)/2,(width+1)/2);
     auto Cr_scaled = create_2d_vector<unsigned char>((height+1)/2,(width+1)/2);
