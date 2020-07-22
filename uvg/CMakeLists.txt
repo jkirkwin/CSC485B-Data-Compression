@@ -13,12 +13,12 @@ include_directories(eigen) # Matrix library
 #include_directories(include) # Common utilities
 
 # Add sub-modules
-#add_subdirectory(foo) 
+add_subdirectory(dct)
 
 # Compress and Decompress utilities
 add_executable(uvg_compress uvg_compress.cpp)
 add_executable(uvg_decompress uvg_decompress.cpp)
-#target_link_libraries(uvg_compress dct_lib)
+target_link_libraries(uvg_compress dct_lib)
 
 # Add meta-target for convenience
 add_custom_target(uvg)

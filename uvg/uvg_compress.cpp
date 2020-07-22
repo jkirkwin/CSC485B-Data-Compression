@@ -120,7 +120,7 @@ void compress(const std::string& input_filename, const std::string& output_filen
     auto scaledCb = scale_down(yCbCrImage.cbPlane, 2);
     auto scaledCr = scale_down(yCbCrImage.crPlane, 2);
 
-    // DCT each plane
+    // todo DCT each plane
 //    auto dctYBlocks = dct::transform(yCbCrImage.yPlane);
 //    auto dctCbBlocks = dct::transform(scaledCb);
 //    auto dctCrBlocks = dct::transform(scaledCr);
