@@ -7,8 +7,6 @@
 
 namespace dct {
     typedef Eigen::Matrix<float, BLOCK_DIMENSION, BLOCK_DIMENSION> matrix_f_t;
-    typedef std::vector<int> block_t;
-    typedef Eigen::Matrix<unsigned char, BLOCK_DIMENSION, BLOCK_DIMENSION> block_matrix_t;
 
     // Should only be accessed via getCMatrix()
     // todo this lazy eval is pretty ugly. Consider hiding it.
@@ -42,8 +40,8 @@ namespace dct {
         return _cMatrix;
     }
 
-    block_t encodeBlock(
-            const block_matrix_t& rawBlock,
+    encoded_block_t encodeBlock(
+            const raw_block_t& rawBlock,
             const matrix_f_t& cMatrix,
             const quantize::quantizer_t& quantizer) {
 
@@ -53,7 +51,7 @@ namespace dct {
         const auto dctResult = cMatrix * fBlock * cMatrix.transpose();
 
         // quantize the block
-        block_matrix_t quantized;
+        raw_block_t quantized;
         for (int row = 0; row < BLOCK_DIMENSION; ++row) {
             for (int col = 0; col < BLOCK_DIMENSION; ++col) {
                 auto dctElem = dctResult(row, col);
@@ -64,7 +62,7 @@ namespace dct {
 
         // todo linearize the block
         // for now (to test) just emit the blocks in row-major order.
-        block_t result;
+        encoded_block_t result;
         result.reserve(quantized.size());
         for (int i = 0; i < quantized.rows(); ++i) {
             for (int j = 0; j < quantized.cols(); ++j) {
@@ -74,12 +72,12 @@ namespace dct {
         return result;
     }
 
-    std::vector<block_t> transform(const Eigen::MatrixX<unsigned char>& inputMatrix, const quantize::quantizer_t& quantizer) {
+    std::vector<encoded_block_t> transform(const Eigen::MatrixX<unsigned char>& inputMatrix, const quantize::quantizer_t& quantizer) {
         assert (inputMatrix.rows() > 0 && inputMatrix.cols() > 0);
 
         const auto cMatrix = getCMatrix();
 
-        std::vector<block_t> result;
+        std::vector<encoded_block_t> result;
         result.reserve(inputMatrix.size() / (BLOCK_DIMENSION*BLOCK_DIMENSION));
 
         for (int row = 0; row < inputMatrix.rows(); row += BLOCK_DIMENSION) {
@@ -130,7 +128,7 @@ namespace dct {
         return expandedMatrix.topLeftCorner(ctx.height, ctx.width);
     }
 
-    Eigen::MatrixX<unsigned char> decodeBlock(const std::vector<int>& block, const quantize::quantizer_t& quantizer) {
+    raw_block_t decodeBlock(const std::vector<int>& block, const quantize::quantizer_t& quantizer) {
         assert (block.size() == BLOCK_DIMENSION*BLOCK_DIMENSION); // todo should really just use std::array<64>
 
         // construct the de-quantized matrix
@@ -156,14 +154,14 @@ namespace dct {
     // Matrices are suggested by JPEG standard
     namespace quantize {
 
-        bool luminanceSet = false;
-        bool chromananceSet = false;
-        quantizer_t luminance;
-        quantizer_t chromanance;
+        bool _luminanceSet = false;
+        bool _chromananceSet = false;
+        quantizer_t _luminance;
+        quantizer_t _chromanance;
 
-        quantizer_t getLuminanceQuantizer() {
-            if (!luminanceSet) {
-                luminance <<
+        quantizer_t luminance() {
+            if (!_luminanceSet) {
+                _luminance <<
                         16, 11, 10, 16, 24, 40, 51, 61,
                         12, 12, 14, 19, 26, 58, 60, 55,
                         14, 13, 16, 24, 40, 57, 69, 56,
@@ -172,14 +170,14 @@ namespace dct {
                         24, 35, 55, 64, 81, 104, 113, 92,
                         49, 64, 78, 87, 103, 121, 120, 101,
                         72, 92, 95, 98, 112, 100, 103, 99;
-                luminanceSet = true;
+                _luminanceSet = true;
             }
-            return luminance;
+            return _luminance;
         }
 
         quantizer_t getChromananceQuanizer() {
-            if (!chromananceSet) {
-                chromanance <<
+            if (!_chromananceSet) {
+                _chromanance <<
                         7, 18, 24, 47, 99, 99, 99, 99,
                         18, 21, 26, 66, 99, 99, 99, 99,
                         24, 26, 56, 99, 99, 99, 99, 99,
@@ -188,9 +186,9 @@ namespace dct {
                         99, 99, 99, 99, 99, 99, 99, 99,
                         99, 99, 99, 99, 99, 99, 99, 99,
                         99, 99, 99, 99, 99, 99, 99, 99;
-                chromananceSet = true;
+                _chromananceSet = true;
             }
-            return chromanance;
+            return _chromanance;
         }
     }
 }

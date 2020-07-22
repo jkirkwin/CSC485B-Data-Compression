@@ -19,10 +19,16 @@
 namespace dct {
     const auto BLOCK_DIMENSION = 8;
 
+    typedef Eigen::Matrix<unsigned char, BLOCK_DIMENSION, BLOCK_DIMENSION> raw_block_t;
+
+    // todo make this an array of size 64
+    // todo does this need to be an int? inspect the values of the matrix when running on test data
+    typedef std::vector<int> encoded_block_t;
+
     namespace quantize {
         typedef Eigen::Matrix<int, BLOCK_DIMENSION, BLOCK_DIMENSION> quantizer_t;
-        quantizer_t getLuminanceQuantizer();
-        quantizer_t getChromananceQuanizer();
+        quantizer_t luminance();
+        quantizer_t chromanance();
     }
 
     /**
@@ -33,7 +39,7 @@ namespace dct {
      * The first element of each block is the DC coefficient, which is followed
      * by the AC coefficients in order of proximity to the DC coefficient.
      */
-    std::vector<std::vector<int>> transform(const Eigen::MatrixX<unsigned char>&, const quantize::quantizer_t&);
+    std::vector<encoded_block_t> transform(const Eigen::MatrixX<unsigned char>&, const quantize::quantizer_t&);
 
     struct context {
         unsigned int height, width;
@@ -51,7 +57,7 @@ namespace dct {
     /**
      * Decodes the given block into a matrix representation.
      */
-    Eigen::MatrixX<unsigned char> decodeBlock(const std::vector<int>& block, const quantize::quantizer_t&);
+    raw_block_t decodeBlock(const std::vector<int>& block, const quantize::quantizer_t&);
 }
 
 #endif
