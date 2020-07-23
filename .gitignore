@@ -44,3 +44,4 @@
 */**/catch/
 */**/cmake-build-debug/
 eigen
+result_images
