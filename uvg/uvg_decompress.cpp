@@ -24,6 +24,7 @@
 #include "bitmap_image.hpp"
 #include "uvg_common.hpp"
 #include "dct/dct.h"
+#include "matrix.h"
 
 // todo remove
 void createTestImage() {
@@ -64,82 +65,134 @@ std::vector<dct::encoded_block_t> getBlocks(unsigned int n, InputBitStream& inSt
     return container;
 }
 
-void decompress(const std::string& input_filename, const std::string& output_filename) {
-    std::cout << "Decompressing " << input_filename << " to " << output_filename << std::endl;
+//void decompress(const std::string& input_filename, const std::string& output_filename) {
+//    std::cout << "Decompressing " << input_filename << " to " << output_filename << std::endl;
+//
+//    std::ifstream input_file{input_filename,std::ios::binary};
+//    InputBitStream input_stream {input_file};
+//
+//    unsigned int height = input_stream.read_u32();
+//    unsigned int width = input_stream.read_u32();
+//
+//    // todo This is where we will need to add delta decompression and DCT inversion.
+//    //      For the DCT we'll need the quality measure from the bit stream
+//
+//
+//    // Read in the DCT blocks.
+//    // todo add scaling back in
+//    auto yBlocks = getBlocks(height * width, input_stream);
+////    auto scaledHeight = (height+1)/2;
+////    auto scaledWidth = (width+1)/2;
+////    auto scaledSize = scaledHeight * scaledWidth;
+////    auto cbBlocks = getBlocks(scaledSize, input_stream);
+//    auto cbBlocks = getBlocks(height * width, input_stream);
+////    auto crBlocks = getBlocks(scaledSize, input_stream);
+//    auto crBlocks = getBlocks(height * width, input_stream);
+//
+//    // Decode the DCT blocks
+//    // todo use the appropriate quantizers
+////    auto yCtx = dct::luminanceContext(height, width);
+//    dct::inversionContext yCtx {height, width, dct::quantize::none()};
+//    auto yMatrix = dct::invert(yBlocks, yCtx);
+//    dct::inversionContext cCtx {height, width, dct::quantize::none()};
+////    auto cCtx = dct::chromananceContext(height, width);
+////    auto scaledCbMatrix = dct::invert(cbBlocks, cCtx);
+//    auto cbMatrix = dct::invert(cbBlocks, cCtx);
+////    auto scaledCrMatrix = dct::invert(crBlocks, cCtx);
+//    auto crMatrix = dct::invert(crBlocks, cCtx);
+//
+//   // ----------old code------------
+////    auto Y = create_2d_vector<unsigned char>(height,width);
+////    auto Cb_scaled = create_2d_vector<unsigned char>((height+1)/2,(width+1)/2);
+////    auto Cr_scaled = create_2d_vector<unsigned char>((height+1)/2,(width+1)/2);
+//
+////    for (unsigned int y = 0; y < height; y++) {
+////        for (unsigned int x = 0; x < width; x++) {
+////            Y.at(y).at(x) = input_stream.read_byte();
+////        }
+////    }
+////
+////    for (unsigned int y = 0; y < (height+1)/2; y++) {
+////        for (unsigned int x = 0; x < (width+1)/2; x++) {
+////            Cb_scaled.at(y).at(x) = input_stream.read_byte();
+////        }
+////    }
+////
+////    for (unsigned int y = 0; y < (height+1)/2; y++) {
+////        for (unsigned int x = 0; x < (width+1)/2; x++) {
+////            Cr_scaled.at(y).at(x) = input_stream.read_byte();
+////        }
+////    }
+//
+//    auto imageYCbCr = create_2d_vector<PixelYCbCr>(height,width);
+//    for (unsigned int y = 0; y < height; y++){
+//        for (unsigned int x = 0; x < width; x++){
+//            imageYCbCr.at(y).at(x) = {
+//
+//                yMatrix(y,x),
+//                cbMatrix(y,x),
+//                crMatrix(y,x)
+////                scaledCbMatrix(y/2,x/2),
+////                scaledCrMatrix(y/2,x/2)
+//
+////                Y.at(y).at(x),
+////                Cb_scaled.at(y/2).at(x/2),
+////                Cr_scaled.at(y/2).at(x/2)
+//
+//
+////                128, 128
+//            };
+//        }
+//    }
+//
+//    input_stream.flush_to_byte();
+//    input_file.close();
+//
+//    bitmap_image output_image {width,height};
+//
+//    for (unsigned int y = 0; y < height; y++){
+//        for (unsigned int x = 0; x < width; x++){
+//            auto pixel_rgb = imageYCbCr.at(y).at(x).to_rgb();
+//            auto [r,g,b] = pixel_rgb;
+//            output_image.set_pixel(x,y,r,g,b);
+//        }
+//    }
+//
+//    output_image.save_image(output_filename);
+//}
 
+void fillMatrix(matrix::Matrix<unsigned char>& m, InputBitStream& inputBitStream) {
+    for (int i = 0; i < m.capacity(); ++i) {
+        m.data.at(i) = inputBitStream.read_byte();
+    }
+}
+
+void decompressNew(const std::string& input_filename, const std::string& output_filename) {
     std::ifstream input_file{input_filename,std::ios::binary};
     InputBitStream input_stream {input_file};
 
     unsigned int height = input_stream.read_u32();
     unsigned int width = input_stream.read_u32();
 
-    // todo This is where we will need to add delta decompression and DCT inversion.
-    //      For the DCT we'll need the quality measure from the bit stream
+    unsigned int scaledHeight = (height+1)/2;
+    unsigned int scaledWidth = (width+1)/2;
 
+    matrix::Matrix<unsigned char> yMatrix(height, width),
+                                  scaledCbMatrix(scaledHeight, scaledWidth),
+                                  scaledCrMatrix(scaledHeight, scaledWidth);
 
-    // Read in the DCT blocks.
-    // todo add scaling back in
-    auto yBlocks = getBlocks(height * width, input_stream);
-//    auto scaledHeight = (height+1)/2;
-//    auto scaledWidth = (width+1)/2;
-//    auto scaledSize = scaledHeight * scaledWidth;
-//    auto cbBlocks = getBlocks(scaledSize, input_stream);
-    auto cbBlocks = getBlocks(height * width, input_stream);
-//    auto crBlocks = getBlocks(scaledSize, input_stream);
-    auto crBlocks = getBlocks(height * width, input_stream);
-
-    // Decode the DCT blocks
-    // todo use the appropriate quantizers
-//    auto yCtx = dct::luminanceContext(height, width);
-    dct::context yCtx {height, width, dct::quantize::none()};
-    auto yMatrix = dct::invert(yBlocks, yCtx);
-    dct::context cCtx {height, width, dct::quantize::none()};
-//    auto cCtx = dct::chromananceContext(height, width);
-//    auto scaledCbMatrix = dct::invert(cbBlocks, cCtx);
-    auto cbMatrix = dct::invert(cbBlocks, cCtx);
-//    auto scaledCrMatrix = dct::invert(crBlocks, cCtx);
-    auto crMatrix = dct::invert(crBlocks, cCtx);
-
-   // ----------old code------------
-//    auto Y = create_2d_vector<unsigned char>(height,width);
-//    auto Cb_scaled = create_2d_vector<unsigned char>((height+1)/2,(width+1)/2);
-//    auto Cr_scaled = create_2d_vector<unsigned char>((height+1)/2,(width+1)/2);
-
-//    for (unsigned int y = 0; y < height; y++) {
-//        for (unsigned int x = 0; x < width; x++) {
-//            Y.at(y).at(x) = input_stream.read_byte();
-//        }
-//    }
-//
-//    for (unsigned int y = 0; y < (height+1)/2; y++) {
-//        for (unsigned int x = 0; x < (width+1)/2; x++) {
-//            Cb_scaled.at(y).at(x) = input_stream.read_byte();
-//        }
-//    }
-//
-//    for (unsigned int y = 0; y < (height+1)/2; y++) {
-//        for (unsigned int x = 0; x < (width+1)/2; x++) {
-//            Cr_scaled.at(y).at(x) = input_stream.read_byte();
-//        }
-//    }
+    // Read literlas into the matrixes
+    fillMatrix(yMatrix, input_stream);
+    fillMatrix(scaledCbMatrix, input_stream);
+    fillMatrix(scaledCrMatrix, input_stream);
 
     auto imageYCbCr = create_2d_vector<PixelYCbCr>(height,width);
     for (unsigned int y = 0; y < height; y++){
         for (unsigned int x = 0; x < width; x++){
             imageYCbCr.at(y).at(x) = {
-
-                yMatrix(y,x),
-                cbMatrix(y,x),
-                crMatrix(y,x)
-//                scaledCbMatrix(y/2,x/2),
-//                scaledCrMatrix(y/2,x/2)
-
-//                Y.at(y).at(x),
-//                Cb_scaled.at(y/2).at(x/2),
-//                Cr_scaled.at(y/2).at(x/2)
-
-
-//                128, 128
+                    yMatrix.at(y, x),
+                    scaledCbMatrix.at(y/2, x/2),
+                    scaledCrMatrix.at(y/2, x/2)
             };
         }
     }
@@ -156,7 +209,7 @@ void decompress(const std::string& input_filename, const std::string& output_fil
             output_image.set_pixel(x,y,r,g,b);
         }
     }
-    
+
     output_image.save_image(output_filename);
 }
 
@@ -168,7 +221,7 @@ int main(int argc, char** argv) {
     }
     std::string input_filename {argv[1]};
     std::string output_filename {argv[2]};
-    decompress(input_filename, output_filename);
+    decompressNew(input_filename, output_filename);
 //*/
 
 //    auto infile = "/home/jamie/csc485/CSC485B-Data-Compression/uvg/temp.bin";
