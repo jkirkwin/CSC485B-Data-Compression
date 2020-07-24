@@ -9,8 +9,7 @@ find_package(Boost)
 
 # Add include directories
 include_directories(catch) # Catch2 testing library
-include_directories(eigen) # Matrix library
-#include_directories(include) # Common utilities
+include_directories(include) # Common utilities
 
 # Add sub-modules
 add_subdirectory(dct)
