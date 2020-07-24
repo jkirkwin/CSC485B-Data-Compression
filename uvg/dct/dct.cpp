@@ -35,8 +35,22 @@ namespace dct {
      */
     raw_block_t getRawBlockFromFloat(const matrix::Matrix<float>& block) {
         // https://stackoverflow.com/questions/6399090/c-convert-vectorint-to-vectordouble
-        std::vector<unsigned char> intData(block.data.begin(), block.data.end());
-        return raw_block_t(block.rows, block.cols, intData);
+
+        std::vector<unsigned char> byteData;
+        for (auto f : block.data) {
+            // ensure that we don't wrap around on out-of-range values
+            if ( f <= 0) {
+                byteData.push_back(0);
+            }
+            else if (f > 255) {
+                byteData.push_back(255);
+            }
+            else {
+                byteData.push_back(std::round(f));
+            }
+        }
+
+        return raw_block_t(block.rows, block.cols, byteData);
     }
 
 
@@ -150,7 +164,6 @@ namespace dct {
         auto dctDecoded = matrix::multiply(intermediate, cMatrix);
 
         // convert back to bytes from real values
-        // todo check that we're not getting an overflow/wraparound that doesn't fit in a byte.
         return getRawBlockFromFloat(dctDecoded);
     }
 
