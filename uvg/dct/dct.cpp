@@ -12,6 +12,8 @@ namespace dct {
     // todo this lazy eval is pretty ugly. Consider hiding it.
     matrix_f_t _cMatrix;
     bool _cMatrixInit = false;
+    matrix_f_t _cMatrixTranspose;
+    bool _cTransposeInit = false;
 
     /**
      * The 'C' matrix is the one given in the slides which can be used to
@@ -40,15 +42,22 @@ namespace dct {
         return _cMatrix;
     }
 
-    encoded_block_t encodeBlock(
-            const raw_block_t& rawBlock,
-            const matrix_f_t& cMatrix,
-            const quantize::quantizer_t& quantizer) {
+    matrix_f_t getCTranspose() {
+        if (! _cTransposeInit) {
+            _cMatrixTranspose = getCMatrix().transpose();
+            _cTransposeInit = true;
+        }
+        return _cMatrixTranspose;
+    }
+
+    encoded_block_t encodeBlock(const raw_block_t& rawBlock, const quantize::quantizer_t& quantizer) {
+        const auto cMatrix = getCMatrix();
+        const auto cTranspose = getCTranspose(); // Don't take the transpose manually because we cache it
 
         // convert the block to hold floats so that we can use Eigen's
         // multiplication operation to compute the DCT
         const auto fBlock = rawBlock.cast<float>();
-        const auto dctResult = cMatrix * fBlock * cMatrix.transpose();
+        const auto dctResult = cMatrix * fBlock * cTranspose;
 
         // quantize the block
         raw_block_t quantized;
@@ -75,10 +84,8 @@ namespace dct {
     std::vector<encoded_block_t> transform(const Eigen::MatrixX<unsigned char>& inputMatrix, const quantize::quantizer_t& quantizer) {
         assert (inputMatrix.rows() > 0 && inputMatrix.cols() > 0);
 
-        const auto cMatrix = getCMatrix();
-
         std::vector<encoded_block_t> result;
-        result.reserve(inputMatrix.size() / (BLOCK_DIMENSION*BLOCK_DIMENSION));
+        result.reserve(inputMatrix.size() / BLOCK_CAPACITY);
 
         for (int row = 0; row < inputMatrix.rows(); row += BLOCK_DIMENSION) {
             for (int col = 0; col < inputMatrix.cols(); col += BLOCK_DIMENSION) {
@@ -87,13 +94,13 @@ namespace dct {
 
                 // ensure the block is big enough. If we have a decreased number of rows or columns
                 // then the missing entries are filled with zeros.
-                Eigen::Matrix<unsigned char, BLOCK_DIMENSION, BLOCK_DIMENSION> rawBlock;
+                raw_block_t rawBlock;
                 rawBlock.setZero();
 
-                // This copies into only the numRows*numCols section of the raw block. The rest remains 0.
+                // This copies into only the numRows*numCols section of the raw block. The rest remains 0s.
                 rawBlock.topLeftCorner(numRows, numCols) = inputMatrix.block(row, col, numRows, numCols);
 
-                auto encodedBlock = encodeBlock(rawBlock, cMatrix, quantizer);
+                auto encodedBlock = encodeBlock(rawBlock, quantizer);
                 result.push_back(encodedBlock);
             }
         }
@@ -102,15 +109,24 @@ namespace dct {
 
     // Scale up the given dimension to be a multiple of the block size.
     unsigned int getExpandedDimension(int dim) {
-        auto difference = dim % BLOCK_DIMENSION;
-        return dim + difference;
+        auto mod = dim % BLOCK_DIMENSION;
+        if (mod == 0) {
+            return dim;
+        }
+        else {
+            return dim + BLOCK_DIMENSION - mod;
+        }
     }
 
     Eigen::MatrixX<unsigned char> invert(const std::vector<std::vector<int>>& blocks, const context& ctx) {
-        // Create a matrix that is bigger than or the same size as the original input to easily insert blocks.
+        // Create a matrix that is bigger than or the same size as the original
+        // input to easily insert blocks even if the original image does not
+        // divide evenly into our chosen block size.
         auto expandedHeight = getExpandedDimension(ctx.height);
         auto expandedWidth = getExpandedDimension(ctx.width);
         Eigen::MatrixX<unsigned char> expandedMatrix(expandedHeight, expandedWidth);
+        assert (expandedMatrix.rows() % BLOCK_DIMENSION == 0);
+        assert (expandedMatrix.cols() % BLOCK_DIMENSION == 0);
 
         // Populate the expanded matrix
         for (int row = 0; row < expandedMatrix.rows(); row += BLOCK_DIMENSION) {
@@ -128,23 +144,24 @@ namespace dct {
         return expandedMatrix.topLeftCorner(ctx.height, ctx.width);
     }
 
-    raw_block_t decodeBlock(const std::vector<int>& block, const quantize::quantizer_t& quantizer) {
-        assert (block.size() == BLOCK_DIMENSION*BLOCK_DIMENSION); // todo should really just use std::array<64>
+    raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t& quantizer) {
+        assert (block.size() == BLOCK_CAPACITY); // todo should really just use std::array<64>
 
         // construct the de-quantized matrix
-        Eigen::Matrix<float, BLOCK_DIMENSION, BLOCK_DIMENSION> dctResult;
+        Eigen::Matrix<float, BLOCK_DIMENSION, BLOCK_DIMENSION> dctEncoded;
         for (int row = 0; row < BLOCK_DIMENSION; ++row) {
             for (int col = 0; col < BLOCK_DIMENSION; ++col) {
                 auto flattenedIndex = row * BLOCK_DIMENSION + col;
-                auto quantized = block.at(flattenedIndex);
-                auto deQuantized = quantized * quantizer(row, col);
-                dctResult(row, col) = deQuantized;
+                auto quantized = block.at(flattenedIndex); // T in the slides
+                auto deQuantized = quantized * quantizer(row, col); // D' in the slides
+                dctEncoded(row, col) = deQuantized;
             }
         }
 
         // invert the DCT (CT*D*C)
         auto cMatrix = getCMatrix();
-        Eigen::Matrix<float, BLOCK_DIMENSION, BLOCK_DIMENSION> dctDecoded = cMatrix.transpose() * dctResult * cMatrix;
+        auto cTranspose = getCTranspose(); // This is cached, so don't re-compute it here.
+        auto dctDecoded = cTranspose * dctEncoded * cMatrix;
 
         // convert the decoded value back to bytes. some data may be lost since
         // we're truncating rather than rounding here.
@@ -175,7 +192,7 @@ namespace dct {
             return _luminance;
         }
 
-        quantizer_t getChromananceQuanizer() {
+        quantizer_t chromanance() {
             if (!_chromananceSet) {
                 _chromanance <<
                         7, 18, 24, 47, 99, 99, 99, 99,

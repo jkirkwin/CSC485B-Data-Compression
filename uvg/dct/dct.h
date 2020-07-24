@@ -1,6 +1,8 @@
 #ifndef UVG_DCT_H
 #define UVG_DCT_H
 
+#include <utility>
+
 #include "Eigen/Dense"
 // todo add quality param
 /**
@@ -18,21 +20,43 @@
  */
 namespace dct {
     const auto BLOCK_DIMENSION = 8;
+    const auto BLOCK_CAPACITY = 64;
 
     typedef Eigen::Matrix<unsigned char, BLOCK_DIMENSION, BLOCK_DIMENSION> raw_block_t;
 
     // todo make this an array of size 64
-    // todo does this need to be an int? inspect the values of the matrix when running on test data
     typedef std::vector<int> encoded_block_t;
 
+    /**
+     * Holds accessors for various useful quantization matrixes.
+     */
     namespace quantize {
         typedef Eigen::Matrix<int, BLOCK_DIMENSION, BLOCK_DIMENSION> quantizer_t;
+
+        /**
+         * @return The quantizer used by JPEG for the luminance plane in a
+         * YCbCr image.
+         */
         quantizer_t luminance();
+
+        /**
+         * @return The quantizer used by JPEG for the chromanance planes in a
+         * YCbCr image.
+         */
         quantizer_t chromanance();
+
+        /**
+         * @return A quantizer matrix of all 1's. If this is used, the result
+         * of the DCT process will be the rounded coefficients of the DCT
+         * result i.e. no real quantization).
+         */
+        inline quantizer_t none() {
+            return quantizer_t::Ones();
+        }
     }
 
     /**
-     * Perform the DCT transform on the given matrix.
+     * Perform a block-based DCT transform on the given matrix.
      *
      * @return An encoded sequence of DCT blocks. Each block is a transformed,
      * quantized, and linearized encoding of a region of the input matrix.
@@ -41,10 +65,31 @@ namespace dct {
      */
     std::vector<encoded_block_t> transform(const Eigen::MatrixX<unsigned char>&, const quantize::quantizer_t&);
 
+    /**
+     * Encode a single block.
+     *
+     * The input matrix is transformed via DCT, quantized, and linearized.
+     */
+    encoded_block_t encodeBlock(const raw_block_t& rawBlock, const quantize::quantizer_t&);
+
+
+    // todo rename to inversionContext and add docstring
     struct context {
         unsigned int height, width;
         quantize::quantizer_t quantizer;
+
+        context(unsigned int h, unsigned int w, quantize::quantizer_t  q):
+            height(h), width(w), quantizer(std::move(q)) {
+        }
     };
+
+    inline context luminanceContext(unsigned int h, unsigned int w) {
+        return context(h, w, quantize::luminance());
+    }
+
+    inline context chromananceContext(unsigned int h, unsigned int w) {
+        return context(h, w, quantize::chromanance());
+    }
 
     /**
      * Inverts the DCT transform given the set of encoded blocks.
@@ -52,12 +97,12 @@ namespace dct {
      * @return The decompressed matrix. Note: This is unlikely to be identical
      * to the original input. This DCT is a lossy process.
      */
-    Eigen::MatrixX<unsigned char> invert(const std::vector<std::vector<int>>& blocks, const context&);
+    Eigen::MatrixX<unsigned char> invert(const std::vector<encoded_block_t>& blocks, const context&);
 
     /**
      * Decodes the given block into a matrix representation.
      */
-    raw_block_t decodeBlock(const std::vector<int>& block, const quantize::quantizer_t&);
+    raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t&);
 }
 
 #endif

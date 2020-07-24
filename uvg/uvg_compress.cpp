@@ -97,14 +97,12 @@ YCbCrImage getYCbCrImage(const bitmap_image& input_image) {
 }
 
 void compress(const std::string& input_filename, const std::string& output_filename) {
+    std::cout << "Compressing " << input_filename << " to " << output_filename << std::endl;
+
     bitmap_image input_image {input_filename};
-    auto imageYCbCr = getYCbCrImage(input_image);
 
     std::ofstream output_file{output_filename, std::ios::binary};
     OutputBitStream output_stream {output_file};
-
-    //Placeholder: Use a simple bitstream containing the height/width (in 32 bits each)
-    //followed by the entire set of values in each colour plane (in row major order).
 
     // todo improve the bitstream's efficiency for encoding width and height. Variable byte encoding?
 
@@ -113,43 +111,65 @@ void compress(const std::string& input_filename, const std::string& output_filen
     output_stream.push_u32(height);
     output_stream.push_u32(width);
 
-
     auto yCbCrImage = getYCbCrImage(input_image);
 
-    // Scale the two colour planes
-    auto scaledCb = scale_down(yCbCrImage.cbPlane, 2);
-    auto scaledCr = scale_down(yCbCrImage.crPlane, 2);
+    // todo Scale the two colour planes
+//    auto scaledCb = scale_down(yCbCrImage.cbPlane, 2);
+//    auto scaledCr = scale_down(yCbCrImage.crPlane, 2);
 
-    // todo DCT each plane
-//    auto dctYBlocks = dct::transform(yCbCrImage.yPlane);
-//    auto dctCbBlocks = dct::transform(scaledCb);
-//    auto dctCrBlocks = dct::transform(scaledCr);
+    // DCT each plane
+    // todo use appropriate quantizers
+    auto dctYBlocks = dct::transform(yCbCrImage.yPlane, dct::quantize::none());
+    auto dctCbBlocks = dct::transform(yCbCrImage.cbPlane, dct::quantize::none());
+//    auto dctCbBlocks = dct::transform(scaledCb, dct::quantize::chromanance());
+    auto dctCrBlocks = dct::transform(yCbCrImage.crPlane, dct::quantize::none());
+//    auto dctCrBlocks = dct::transform(scaledCr, dct::quantize::chromanance());
 
     // todo run delta compression on each plane
     // todo send results to output file.
 
-    // Temp: Write the matrixes to verify
-    for (int row = 0; row < yCbCrImage.yPlane.rows(); ++row) {
-        for (int col = 0; col < yCbCrImage.yPlane.cols(); ++col) {
-            output_stream.push_byte(yCbCrImage.yPlane(row, col));
+    // TEMP: write the blocks to verify
+    for (const auto& block: dctYBlocks) {
+        for (const int coef : block) {
+            output_stream.push_u16(coef);
         }
     }
-    for (int row = 0; row < scaledCb.rows(); ++row) {
-        for (int col = 0; col < scaledCb.cols(); ++col) {
-            output_stream.push_byte(scaledCb(row, col));
+
+    for (const auto& block: dctCbBlocks) {
+          for (const int coef : block) {
+              output_stream.push_u16(coef);
+          }
+    }
+    for (const auto& block: dctCrBlocks) {
+        for (const int coef : block) {
+            output_stream.push_u16(coef);
         }
     }
-    for (int row = 0; row < scaledCr.rows(); ++row) {
-        for (int col = 0; col < scaledCr.cols(); ++col) {
-            output_stream.push_byte(scaledCr(row, col));
-        }
-    }
+
+
+    // TEMP: Write the matrixes to verify
+//    for (int row = 0; row < yCbCrImage.yPlane.rows(); ++row) {
+//        for (int col = 0; col < yCbCrImage.yPlane.cols(); ++col) {
+//            output_stream.push_byte(yCbCrImage.yPlane(row, col));
+//        }
+//    }
+//    for (int row = 0; row < scaledCb.rows(); ++row) {
+//        for (int col = 0; col < scaledCb.cols(); ++col) {
+//            output_stream.push_byte(scaledCb(row, col));
+//        }
+//    }
+//    for (int row = 0; row < scaledCr.rows(); ++row) {
+//        for (int col = 0; col < scaledCr.cols(); ++col) {
+//            output_stream.push_byte(scaledCr(row, col));
+//        }
+//    }
 
     output_stream.flush_to_byte();
     output_file.close();
 }
 
 int main(int argc, char ** argv) {
+//    /*
     if (argc < 4){
         std::cerr << "Usage: " << argv[0] << " <low/medium/high> <input BMP> <output file>" << std::endl;
         return 1;
@@ -160,7 +180,10 @@ int main(int argc, char ** argv) {
     std::string output_filename {argv[3]};
     compress(input_filename, output_filename);
 
-//    compress("/home/jamie/csc485/CSC485B-Data-Compression/uvg/test_images/Flag_of_Canada_medium.bmp", "/tmp/foo");
+//     */
+//    std::string infile = "/home/jamie/csc485/CSC485B-Data-Compression/uvg/test_images/grapefruit.bmp";
+//    std::string outfile = "/home/jamie/csc485/CSC485B-Data-Compression/uvg/temp.bin";
+//    compress(infile, outfile);
 
     return 0;
 }
