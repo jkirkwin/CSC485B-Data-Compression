@@ -25,6 +25,7 @@ namespace dct {
 
     typedef matrix::Matrix<unsigned char> raw_block_t; // Must be 8x8
     typedef std::vector<int> encoded_block_t; // must be length 64 todo make this an int array instead
+    // todo can this be a short?
 
     /**
      * Holds accessors for various useful quantization matrixes.

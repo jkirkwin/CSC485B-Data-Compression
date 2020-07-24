@@ -15,11 +15,8 @@
 */
 
 #include <iostream>
-#include <fstream>
-#include <array>
 #include <string>
 #include <cassert>
-#include <cstdint>
 #include "input_stream.hpp"
 #include "bitmap_image.hpp"
 #include "uvg_common.hpp"
@@ -52,18 +49,18 @@ void createTestImage() {
 }
 
 
-std::vector<dct::encoded_block_t> getBlocks(unsigned int n, InputBitStream& inStream) {
-    std::vector<dct::encoded_block_t> container;
-    container.reserve(n);
-    for (int i = 0; i < n; ++i) {
-        dct::encoded_block_t block;
-        for (int j = 0; j < dct::BLOCK_CAPACITY; ++j) {
-            block.push_back((int)inStream.read_u16());
-        }
-        container.push_back(block);
-    }
-    return container;
-}
+//std::vector<dct::encoded_block_t> getBlocks(unsigned int n, InputBitStream& inStream) {
+//    std::vector<dct::encoded_block_t> container;
+//    container.reserve(n);
+//    for (int i = 0; i < n; ++i) {
+//        dct::encoded_block_t block;
+//        for (int j = 0; j < dct::BLOCK_CAPACITY; ++j) {
+//            block.push_back((int)inStream.read_u16());
+//        }
+//        container.push_back(block);
+//    }
+//    return container;
+//}
 
 //void decompress(const std::string& input_filename, const std::string& output_filename) {
 //    std::cout << "Decompressing " << input_filename << " to " << output_filename << std::endl;
@@ -161,13 +158,39 @@ std::vector<dct::encoded_block_t> getBlocks(unsigned int n, InputBitStream& inSt
 //    output_image.save_image(output_filename);
 //}
 
-void fillMatrix(matrix::Matrix<unsigned char>& m, InputBitStream& inputBitStream) {
+void fillMatrixWithLiterals(matrix::Matrix<unsigned char>& m, InputBitStream& inputBitStream) {
     for (int i = 0; i < m.capacity(); ++i) {
         m.data.at(i) = inputBitStream.read_byte();
     }
 }
 
+dct::encoded_block_t readEncodedBlock(InputBitStream& inputBitStream) {
+    dct::encoded_block_t block;
+    for (int i = 0; i < dct::BLOCK_CAPACITY; ++i) {
+        block.push_back(inputBitStream.read_u32());
+    }
+    return block;
+}
+
+std::vector<dct::encoded_block_t> readEncodedBlocks(unsigned int n, InputBitStream& inputBitStream) {
+    std::vector<dct::encoded_block_t> blocks(n);
+    for (int i = 0; i < n; ++i) {
+        blocks.at(i) = readEncodedBlock(inputBitStream);
+    }
+    return blocks;
+}
+
+unsigned int blocksToRead(unsigned int height, unsigned int width) {
+    //https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
+    assert (height > 0 && width > 0);
+    auto verticalPartitions = width / dct::BLOCK_DIMENSION + (width % dct::BLOCK_DIMENSION != 0);
+    auto horizontalPartitions = height / dct::BLOCK_DIMENSION + (height % dct::BLOCK_DIMENSION != 0);
+    auto result = verticalPartitions * horizontalPartitions;
+    return result;
+}
+
 void decompressNew(const std::string& input_filename, const std::string& output_filename) {
+    std::cout << "Decompressing " << input_filename << " to " << output_filename << std::endl;
     std::ifstream input_file{input_filename,std::ios::binary};
     InputBitStream input_stream {input_file};
 
@@ -177,15 +200,33 @@ void decompressNew(const std::string& input_filename, const std::string& output_
     unsigned int scaledHeight = (height+1)/2;
     unsigned int scaledWidth = (width+1)/2;
 
-    matrix::Matrix<unsigned char> yMatrix(height, width),
-                                  scaledCbMatrix(scaledHeight, scaledWidth),
-                                  scaledCrMatrix(scaledHeight, scaledWidth);
+    // get the encoded blocks
+    // todo add delta decompression here.
+    auto yPlaneBlocks = blocksToRead(height, width);
+    auto encodedYPlane = readEncodedBlocks(yPlaneBlocks, input_stream);
 
-    // Read literlas into the matrixes
-    fillMatrix(yMatrix, input_stream);
-    fillMatrix(scaledCbMatrix, input_stream);
-    fillMatrix(scaledCrMatrix, input_stream);
+    auto colourPlaneBlocks = blocksToRead(scaledHeight, scaledWidth);
+    auto encodedCbPlane = readEncodedBlocks(colourPlaneBlocks, input_stream);
+    auto encodedCrPlane = readEncodedBlocks(colourPlaneBlocks, input_stream);
 
+    // Invert the DCT to get the decoded Y and colour planes.
+    auto yMatrix = dct::invert(encodedYPlane, dct::luminanceContext(height, width));
+    auto scaledCbMatrix = dct::invert(encodedCbPlane, dct::chromananceContext(scaledHeight, scaledWidth));
+    auto scaledCrMatrix = dct::invert(encodedCrPlane, dct::chromananceContext(scaledHeight, scaledWidth));
+
+    // Read literals into the matrixes
+//    matrix::Matrix<unsigned char> yMatrix(height, width),
+//                                  scaledCbMatrix(scaledHeight, scaledWidth),
+//                                  scaledCrMatrix(scaledHeight, scaledWidth);
+//    fillMatrixWithLiterals(yMatrix, input_stream);
+//    fillMatrixWithLiterals(scaledCbMatrix, input_stream);
+//    fillMatrixWithLiterals(scaledCrMatrix, input_stream);
+
+    input_stream.flush_to_byte();
+    input_file.close();
+
+    // Re-construct the YCbCr image.
+    // todo this could be combined with the loop below.
     auto imageYCbCr = create_2d_vector<PixelYCbCr>(height,width);
     for (unsigned int y = 0; y < height; y++){
         for (unsigned int x = 0; x < width; x++){
@@ -196,9 +237,6 @@ void decompressNew(const std::string& input_filename, const std::string& output_
             };
         }
     }
-
-    input_stream.flush_to_byte();
-    input_file.close();
 
     bitmap_image output_image {width,height};
 
@@ -226,7 +264,7 @@ int main(int argc, char** argv) {
 
 //    auto infile = "/home/jamie/csc485/CSC485B-Data-Compression/uvg/temp.bin";
 //    auto outfile = "/home/jamie/csc485/CSC485B-Data-Compression/uvg/temp.bmp";
-//    decompress(infile, outfile);
+//    decompressNew(infile, outfile);
 
 //    createTestImage();
     return 0;

@@ -199,8 +199,16 @@ void writeLiterals(const matrix::Matrix<unsigned char>& m, OutputBitStream& outp
     }
 }
 
+void writeBlockLiterals(const std::vector<dct::encoded_block_t>& blocks, OutputBitStream& outputBitStream) {
+    for (const auto& block : blocks) {
+        for (auto i : block) {
+            outputBitStream.push_u32(i);
+        }
+    }
+}
+
 void compressNew(const std::string& input_filename, const std::string& output_filename) {
-    std::cout << "Compressing NEW " << input_filename << " to " << output_filename << std::endl;
+    std::cout << "Compressing " << input_filename << " to " << output_filename << std::endl;
 
     bitmap_image input_image{input_filename};
 
@@ -229,82 +237,92 @@ void compressNew(const std::string& input_filename, const std::string& output_fi
     auto scaledCbPlane = scaleDown(cbPlane, 2);
     auto scaledCrPlane = scaleDown(crPlane, 2);
 
-    // todo run DCT etc.
+    // Run DCT on each plane.
+    auto encodedYPlane = dct::transform(yPlane, dct::quantize::luminance());
+    auto encodedCbPlane = dct::transform(scaledCbPlane, dct::quantize::chromanance());
+    auto encodedCrPlane = dct::transform(scaledCrPlane, dct::quantize::chromanance());
+
+    // todo add delta compression here.
+
+    // Write the blocks as-is for testing
+    writeBlockLiterals(encodedYPlane, output_stream);
+    writeBlockLiterals(encodedCbPlane, output_stream);
+    writeBlockLiterals(encodedCrPlane, output_stream);
 
     // Write the literal values for testing
-    writeLiterals(yPlane, output_stream);
-    writeLiterals(scaledCbPlane, output_stream);
-    writeLiterals(scaledCrPlane, output_stream);
+//    writeLiterals(yPlane, output_stream);
+//    writeLiterals(scaledCbPlane, output_stream);
+//    writeLiterals(scaledCrPlane, output_stream);
 
     output_stream.flush_to_byte();
     output_file.close();
 }
 
 
-void compress(const std::string& input_filename, const std::string& output_filename) {
-    std::cout << "Compressing " << input_filename << " to " << output_filename << std::endl;
-
-    bitmap_image input_image{input_filename};
-
-    unsigned int height = input_image.height();
-    unsigned int width = input_image.width();
-
-    //Read the entire image into a 2d array of PixelRGB objects
-    //(Notice that height is the outer dimension, so the pixel at coordinates (x,y)
-    // must be accessed as imageRGB.at(y).at(x)).
-    std::vector<std::vector<PixelYCbCr>> imageYCbCr = create_2d_vector<PixelYCbCr>(height, width);
-
-
-    for (unsigned int y = 0; y < height; y++) {
-        for (unsigned int x = 0; x < width; x++) {
-            auto[r, g, b] = input_image.get_pixel(x, y);
-            PixelRGB rgb_pixel{r, g, b};
-            imageYCbCr.at(y).at(x) = rgb_pixel.to_ycbcr();
-        }
-    }
-
-    std::ofstream output_file{output_filename, std::ios::binary};
-    OutputBitStream output_stream{output_file};
-
-    //Placeholder: Use a simple bitstream containing the height/width (in 32 bits each)
-    //followed by the entire set of values in each colour plane (in row major order).
-
-    output_stream.push_u32(height);
-    output_stream.push_u32(width);
-
-    //Write the Y values
-    for (unsigned int y = 0; y < height; y++)
-        for (unsigned int x = 0; x < width; x++)
-            output_stream.push_byte(imageYCbCr.at(y).at(x).Y);
-
-    //Extract the Cb plane into its own array
-    auto Cb = create_2d_vector<unsigned char>(height, width);
-    for (unsigned int y = 0; y < height; y++)
-        for (unsigned int x = 0; x < width; x++)
-            Cb.at(y).at(x) = imageYCbCr.at(y).at(x).Cb;
-    auto Cb_scaled = scale_down(Cb, width, height, 2);
-
-    //Extract the Cr plane into its own array
-    auto Cr = create_2d_vector<unsigned char>(height, width);
-    for (unsigned int y = 0; y < height; y++)
-        for (unsigned int x = 0; x < width; x++)
-            Cr.at(y).at(x) = imageYCbCr.at(y).at(x).Cr;
-    auto Cr_scaled = scale_down(Cr, width, height, 2);
-
-    //Write the Cb values
-    for (unsigned int y = 0; y < (height + 1) / 2; y++)
-        for (unsigned int x = 0; x < (width + 1) / 2; x++)
-            output_stream.push_byte(Cb_scaled.at(y).at(x));
-
-    //Write the Cr values
-    for (unsigned int y = 0; y < (height + 1) / 2; y++)
-        for (unsigned int x = 0; x < (width + 1) / 2; x++)
-            output_stream.push_byte(Cr_scaled.at(y).at(x));
-
-
-    output_stream.flush_to_byte();
-    output_file.close();
-}
+//void compress(const std::string& input_filename, const std::string& output_filename) {
+//    std::cout << "Compressing " << input_filename << " to " << output_filename << std::endl;
+//
+//    bitmap_image input_image{input_filename};
+//
+//    unsigned int height = input_image.height();
+//    unsigned int width = input_image.width();
+//
+//    //Read the entire image into a 2d array of PixelRGB objects
+//    //(Notice that height is the outer dimension, so the pixel at coordinates (x,y)
+//    // must be accessed as imageRGB.at(y).at(x)).
+//    std::vector<std::vector<PixelYCbCr>> imageYCbCr = create_2d_vector<PixelYCbCr>(height, width);
+//
+//
+//    for (unsigned int y = 0; y < height; y++) {
+//        for (unsigned int x = 0; x < width; x++) {
+//            auto[r, g, b] = input_image.get_pixel(x, y);
+//            PixelRGB rgb_pixel{r, g, b};
+//            imageYCbCr.at(y).at(x) = rgb_pixel.to_ycbcr();
+//        }
+//    }
+//
+//    std::ofstream output_file{output_filename, std::ios::binary};
+//    OutputBitStream output_stream{output_file};
+//
+//    //Placeholder: Use a simple bitstream containing the height/width (in 32 bits each)
+//    //followed by the entire set of values in each colour plane (in row major order).
+//
+//    output_stream.push_u32(height);
+//    output_stream.push_u32(width);
+//
+//    //Write the Y values
+//    for (unsigned int y = 0; y < height; y++)
+//        for (unsigned int x = 0; x < width; x++)
+//            output_stream.push_byte(imageYCbCr.at(y).at(x).Y);
+//
+//    //Extract the Cb plane into its own array
+//    auto Cb = create_2d_vector<unsigned char>(height, width);
+//    for (unsigned int y = 0; y < height; y++)
+//        for (unsigned int x = 0; x < width; x++)
+//            Cb.at(y).at(x) = imageYCbCr.at(y).at(x).Cb;
+//    auto Cb_scaled = scale_down(Cb, width, height, 2);
+//
+//    //Extract the Cr plane into its own array
+//    auto Cr = create_2d_vector<unsigned char>(height, width);
+//    for (unsigned int y = 0; y < height; y++)
+//        for (unsigned int x = 0; x < width; x++)
+//            Cr.at(y).at(x) = imageYCbCr.at(y).at(x).Cr;
+//    auto Cr_scaled = scale_down(Cr, width, height, 2);
+//
+//    //Write the Cb values
+//    for (unsigned int y = 0; y < (height + 1) / 2; y++)
+//        for (unsigned int x = 0; x < (width + 1) / 2; x++)
+//            output_stream.push_byte(Cb_scaled.at(y).at(x));
+//
+//    //Write the Cr values
+//    for (unsigned int y = 0; y < (height + 1) / 2; y++)
+//        for (unsigned int x = 0; x < (width + 1) / 2; x++)
+//            output_stream.push_byte(Cr_scaled.at(y).at(x));
+//
+//
+//    output_stream.flush_to_byte();
+//    output_file.close();
+//}
 
 
 

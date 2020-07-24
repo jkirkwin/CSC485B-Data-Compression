@@ -96,20 +96,26 @@ namespace dct {
     }
 
     matrix::Matrix<unsigned char> invert(const std::vector<encoded_block_t>& blocks, const inversionContext& context) {
+        //https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
+        auto blocksPerRow = context.width / BLOCK_DIMENSION + (context.width % BLOCK_DIMENSION != 0);
+
         // create and populate a result matrix
         matrix::Matrix<unsigned char> resultMatrix(context.height, context.width);
         for (int row = 0; row < resultMatrix.rows; row += BLOCK_DIMENSION) {
             for (int col = 0; col < resultMatrix.cols; col += BLOCK_DIMENSION) {
-                //
-                auto flattenedIndex = row * BLOCK_DIMENSION + col;
+                // (row, col) is the position of the top left coefficient in the next block of the matrix.
+                //  Map this to an index in the block array.
+                auto colPos = col / BLOCK_DIMENSION;
+                auto rowPos = row / BLOCK_DIMENSION;
+                auto flattenedIndex = colPos + rowPos * blocksPerRow;
                 auto encodedBlock = blocks.at(flattenedIndex);
+
                 auto decodedBlock = decodeBlock(encodedBlock, context.quantizer);
 
                 // Determine if the block should be inserted in full, or if some columns
                 // or rows run off the edge of the image.
                 const auto numRows = std::min(resultMatrix.rows - row, BLOCK_DIMENSION);
                 const auto numCols = std::min(resultMatrix.cols - col, BLOCK_DIMENSION);
-
                 if (numRows == BLOCK_DIMENSION && numCols == BLOCK_DIMENSION) {
                     // no need to trim, so we avoid copying to a new matrix.
                     resultMatrix.insertBlock(row, col, decodedBlock);
