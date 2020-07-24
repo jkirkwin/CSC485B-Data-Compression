@@ -5,7 +5,6 @@
 #include <vector>
 #include "matrix.h"
 
-// todo add quality param
 /**
  * Contains functions for performing and inverting a Discrete Cosine Transform.
  *
@@ -18,6 +17,11 @@
  *
  * Note that this is a lossy technique, and the result of calling transform()
  * followed by invert() is unlikely to yield the exact input data.
+ *
+ * Each transformation function takes a Quality Level parameter, which
+ * determines how aggressively the DCT coefficients will be quantized. A higher
+ * quality level will generate a better looking image, but will produce a less
+ * easily compressed encoding.
  */
 namespace dct {
     const unsigned int BLOCK_DIMENSION = 8;
@@ -55,6 +59,12 @@ namespace dct {
         }
     }
 
+    enum QualityLevel {
+        low,
+        med,
+        high
+    };
+
     /**
      * Perform a block-based DCT transform on the given matrix.
      *
@@ -63,14 +73,14 @@ namespace dct {
      * The first element of each block is the DC coefficient, which is followed
      * by the AC coefficients in order of proximity to the DC coefficient.
      */
-    std::vector<encoded_block_t> transform(const matrix::Matrix<unsigned char>&, const quantize::quantizer_t&);
+    std::vector<encoded_block_t> transform(const matrix::Matrix<unsigned char>&, const quantize::quantizer_t&, QualityLevel);
 
     /**
      * Encode a single block.
      *
      * The input matrix is transformed via DCT, quantized, and linearized.
      */
-    encoded_block_t encodeBlock(const raw_block_t& rawBlock, const quantize::quantizer_t&);
+    encoded_block_t encodeBlock(const raw_block_t& rawBlock, const quantize::quantizer_t&, QualityLevel);
 
     struct inversionContext {
         unsigned int height, width;
@@ -95,12 +105,12 @@ namespace dct {
      * @return The decompressed matrix. Note: This is unlikely to be identical
      * to the original input. This DCT is a lossy process.
      */
-    matrix::Matrix<unsigned char> invert(const std::vector<encoded_block_t>& blocks, const inversionContext&);
+    matrix::Matrix<unsigned char> invert(const std::vector<encoded_block_t>& blocks, const inversionContext&, QualityLevel);
 
     /**
      * Decodes the given block into a matrix representation.
      */
-    raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t&);
+    raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t&, QualityLevel);
 }
 
 #endif

@@ -207,7 +207,21 @@ void writeBlockLiterals(const std::vector<dct::encoded_block_t>& blocks, OutputB
     }
 }
 
-void compressNew(const std::string& input_filename, const std::string& output_filename) {
+void sendQualityLevel(dct::QualityLevel qualityLevel, OutputBitStream& outputBitStream) {
+    auto numBits = 2;
+    if (qualityLevel == dct::low) {
+        outputBitStream.push_bits(0, numBits);
+    }
+    else if(qualityLevel == dct::med) {
+        outputBitStream.push_bits(1, numBits);
+    }
+    else {
+        assert (qualityLevel == dct::high);
+        outputBitStream.push_bits(2, numBits);
+    }
+}
+
+void compressNew(const std::string& input_filename, const std::string& output_filename, dct::QualityLevel qualityLevel) {
     std::cout << "Compressing " << input_filename << " to " << output_filename << std::endl;
 
     bitmap_image input_image{input_filename};
@@ -219,6 +233,8 @@ void compressNew(const std::string& input_filename, const std::string& output_fi
     unsigned int width = input_image.width();
     output_stream.push_u32(height); // todo use a variable byte encoding here.
     output_stream.push_u32(width);
+
+    sendQualityLevel(qualityLevel, output_stream);
 
     // Convert the RBG image to Y, Cb, Cr planes
     matrix::Matrix<unsigned char> yPlane(height, width), cbPlane(height, width), crPlane(height, width);
@@ -238,9 +254,9 @@ void compressNew(const std::string& input_filename, const std::string& output_fi
     auto scaledCrPlane = scaleDown(crPlane, 2);
 
     // Run DCT on each plane.
-    auto encodedYPlane = dct::transform(yPlane, dct::quantize::luminance());
-    auto encodedCbPlane = dct::transform(scaledCbPlane, dct::quantize::chromanance());
-    auto encodedCrPlane = dct::transform(scaledCrPlane, dct::quantize::chromanance());
+    auto encodedYPlane = dct::transform(yPlane, dct::quantize::luminance(), qualityLevel);
+    auto encodedCbPlane = dct::transform(scaledCbPlane, dct::quantize::chromanance(), qualityLevel);
+    auto encodedCrPlane = dct::transform(scaledCrPlane, dct::quantize::chromanance(), qualityLevel);
 
     // todo add delta compression here.
 
@@ -334,10 +350,25 @@ int main(int argc, char ** argv) {
         return 1;
     }
 
+    dct::QualityLevel qualityLevel;
     std::string quality{argv[1]};
+    if (quality == "low") {
+        qualityLevel = dct::low;
+    }
+    else if (quality == "med") {
+        qualityLevel = dct::med;
+    }
+    else if (quality == "high") {
+        qualityLevel = dct::high;
+    }
+    else {
+        std::cerr << "Usage: " << argv[0] << " <low/medium/high> <input BMP> <output file>" << std::endl;
+        return 1;
+    }
+
     std::string input_filename {argv[2]};
     std::string output_filename {argv[3]};
-    compressNew(input_filename, output_filename);
+    compressNew(input_filename, output_filename, qualityLevel);
 
 //     */
 //    std::string infile = "/home/jamie/csc485/CSC485B-Data-Compression/uvg/test_images/grapefruit.bmp";

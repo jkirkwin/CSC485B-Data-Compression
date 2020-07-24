@@ -189,6 +189,20 @@ unsigned int blocksToRead(unsigned int height, unsigned int width) {
     return result;
 }
 
+dct::QualityLevel getQualityLevel(InputBitStream& inputBitStream) {
+    auto encoded = inputBitStream.read_bits(2);
+    assert (encoded != 3);
+    if (encoded == 0) {
+        return dct::low;
+    }
+    else if (encoded == 1) {
+        return dct::med;
+    }
+    else {
+        return dct::high;
+    }
+}
+
 void decompressNew(const std::string& input_filename, const std::string& output_filename) {
     std::cout << "Decompressing " << input_filename << " to " << output_filename << std::endl;
     std::ifstream input_file{input_filename,std::ios::binary};
@@ -196,6 +210,7 @@ void decompressNew(const std::string& input_filename, const std::string& output_
 
     unsigned int height = input_stream.read_u32();
     unsigned int width = input_stream.read_u32();
+    dct::QualityLevel qualityLevel = getQualityLevel(input_stream);
 
     unsigned int scaledHeight = (height+1)/2;
     unsigned int scaledWidth = (width+1)/2;
@@ -210,17 +225,9 @@ void decompressNew(const std::string& input_filename, const std::string& output_
     auto encodedCrPlane = readEncodedBlocks(colourPlaneBlocks, input_stream);
 
     // Invert the DCT to get the decoded Y and colour planes.
-    auto yMatrix = dct::invert(encodedYPlane, dct::luminanceContext(height, width));
-    auto scaledCbMatrix = dct::invert(encodedCbPlane, dct::chromananceContext(scaledHeight, scaledWidth));
-    auto scaledCrMatrix = dct::invert(encodedCrPlane, dct::chromananceContext(scaledHeight, scaledWidth));
-
-    // Read literals into the matrixes
-//    matrix::Matrix<unsigned char> yMatrix(height, width),
-//                                  scaledCbMatrix(scaledHeight, scaledWidth),
-//                                  scaledCrMatrix(scaledHeight, scaledWidth);
-//    fillMatrixWithLiterals(yMatrix, input_stream);
-//    fillMatrixWithLiterals(scaledCbMatrix, input_stream);
-//    fillMatrixWithLiterals(scaledCrMatrix, input_stream);
+    auto yMatrix = dct::invert(encodedYPlane, dct::luminanceContext(height, width), qualityLevel);
+    auto scaledCbMatrix = dct::invert(encodedCbPlane, dct::chromananceContext(scaledHeight, scaledWidth), qualityLevel);
+    auto scaledCrMatrix = dct::invert(encodedCrPlane, dct::chromananceContext(scaledHeight, scaledWidth), qualityLevel);
 
     input_stream.flush_to_byte();
     input_file.close();

@@ -53,23 +53,53 @@ namespace dct {
         return raw_block_t(block.rows, block.cols, byteData);
     }
 
+    float getMultiplier(QualityLevel q) {
+        if (q == low) {
+            return 2;
+        }
+        else if(q == med) {
+            return 1;
+        }
+        else {
+            assert (q == high);
+            return .5;
+        }
+    }
 
-    encoded_block_t encodeBlock(const raw_block_t& rawBlock, const quantize::quantizer_t& quantizer) {
-        const auto rawFloatBlock = getFloatBlock(rawBlock);
-        const auto intermediate = matrix::multiply(cMatrix, rawFloatBlock);
-        const auto dctResult = matrix::multiply(intermediate, cMatrixTranspose);
+    float scaleQuantizerCoefficient(float quantizerCoef, QualityLevel qualityLevel, unsigned int row, unsigned int col) {
+        // todo consider distance from DC coef and scale more aggressively?
+        if (qualityLevel != high && row == 0 && col == 0) {
+            return quantizerCoef; // Don't scale the DC coefficient down
+        }
+        else {
+            auto multiplier = getMultiplier(qualityLevel);
+            return quantizerCoef * multiplier;
+        }
+    }
 
-        // quantize the block
+    encoded_block_t quantizeDctResult(const matrix::Matrix<float>& dctResult, const quantize::quantizer_t& quantizer, QualityLevel qualityLevel) {
         encoded_block_t quantized;
         quantized.reserve(BLOCK_CAPACITY);
         for (int row = 0; row < BLOCK_DIMENSION; ++row) {
             for (int col = 0; col < BLOCK_DIMENSION; ++col) {
                 auto dctElem = dctResult.at(row, col);
                 auto quantElem = (float) quantizer.at(row, col);
-                quantized.push_back(std::round(dctElem / quantElem));
+                auto scaledQuantElem = scaleQuantizerCoefficient(quantElem, qualityLevel, row, col);
+                quantized.push_back(std::round(dctElem / scaledQuantElem));
             }
         }
         assert(quantized.size() == BLOCK_CAPACITY);
+        return quantized;
+    }
+
+    encoded_block_t encodeBlock(const raw_block_t& rawBlock, const quantize::quantizer_t& quantizer, QualityLevel quality) {
+        // Apply DCT
+        const auto rawFloatBlock = getFloatBlock(rawBlock);
+        const auto intermediate = matrix::multiply(cMatrix, rawFloatBlock);
+        const auto dctResult = matrix::multiply(intermediate, cMatrixTranspose);
+
+        // Quantize based on quality level provided
+        auto quantized = quantizeDctResult(dctResult, quantizer, quality);
 
         // todo linearize the block in a zigzag pattern
         // for now just emit the blocks in row-major order.
@@ -78,7 +108,8 @@ namespace dct {
 
     std::vector<encoded_block_t> transform(
             const matrix::Matrix<unsigned char>& inputMatrix,
-            const quantize::quantizer_t& quantizer) {
+            const quantize::quantizer_t& quantizer,
+            QualityLevel quality) {
         assert (inputMatrix.rows > 0 && inputMatrix.cols > 0);
 
         std::vector<encoded_block_t> result;
@@ -102,14 +133,14 @@ namespace dct {
                     }
                 }
 
-                auto encodedBlock = encodeBlock(rawBlock, quantizer);
+                auto encodedBlock = encodeBlock(rawBlock, quantizer, quality);
                 result.push_back(encodedBlock);
             }
         }
         return result;
     }
 
-    matrix::Matrix<unsigned char> invert(const std::vector<encoded_block_t>& blocks, const inversionContext& context) {
+    matrix::Matrix<unsigned char> invert(const std::vector<encoded_block_t>& blocks, const inversionContext& context, QualityLevel quality) {
         //https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
         auto blocksPerRow = context.width / BLOCK_DIMENSION + (context.width % BLOCK_DIMENSION != 0);
 
@@ -124,7 +155,7 @@ namespace dct {
                 auto flattenedIndex = colPos + rowPos * blocksPerRow;
                 auto encodedBlock = blocks.at(flattenedIndex);
 
-                auto decodedBlock = decodeBlock(encodedBlock, context.quantizer);
+                auto decodedBlock = decodeBlock(encodedBlock, context.quantizer, quality);
 
                 // Determine if the block should be inserted in full, or if some columns
                 // or rows run off the edge of the image.
@@ -145,7 +176,7 @@ namespace dct {
         return resultMatrix;
     }
 
-    raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t& quantizer) {
+    raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t& quantizer, QualityLevel quality) {
         assert (block.size() == BLOCK_CAPACITY); // todo should really just use std::array<64>
 
         // construct the de-quantized DCT matrix
@@ -154,7 +185,8 @@ namespace dct {
             for (int col = 0; col < BLOCK_DIMENSION; ++col) {
                 auto flattenedIndex = row * BLOCK_DIMENSION + col;
                 auto quantized = block.at(flattenedIndex); // T in the slides
-                auto deQuantized = quantized * quantizer.at(row, col); // D' in the slides
+                auto scaledQuantizer = scaleQuantizerCoefficient(quantizer.at(row, col), quality, row, col);
+                auto deQuantized = quantized * scaledQuantizer; // D' in the slides
                 dctEncoded.set(row, col, deQuantized);
             }
         }
