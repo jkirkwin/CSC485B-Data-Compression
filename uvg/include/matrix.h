@@ -5,21 +5,53 @@
 #include <cassert>
 
 namespace matrix {
+
+    // todo parameterize on weight and height too so we can use arrays?
     template <class T>
     struct Matrix {
         const unsigned int rows, cols;
         std::vector<T> data;
 
-        unsigned long capacity() {
+        unsigned long capacity() const {
             return rows*cols;
         }
 
-        T at(unsigned int row, unsigned int col) {
+        T at(unsigned int row, unsigned int col) const {
             return data.at(row*cols + col);
         }
 
         void set(unsigned int row, unsigned int col, T value) {
             data.at(row*cols + col) = value;
+        }
+
+        void insertBlock(unsigned int startRow, unsigned int startCol, const Matrix<T>& block) {
+            assert (startRow + block.rows <= this->rows);
+            assert (startCol + block.cols <= this->cols);
+
+            for (int i = 0; i < block.rows; ++i) {
+                for (int j = 0; j < block.cols; ++j) {
+                    auto val = block.at(i, j);
+                    set(startRow + i, startCol + j, val);
+                }
+            }
+        }
+
+        Matrix<T> getBlock(
+                unsigned int startRow,
+                unsigned int startCol,
+                unsigned int numRows,
+                unsigned int numCols) {
+            assert (startRow + numRows <= this->rows);
+            assert (startCol + numCols <= this->cols);
+
+            Matrix<T> block(numRows, numCols);
+            for (int i = 0; i < block.rows; ++i) {
+                for (int j = 0; j < block.cols; ++j) {
+                    auto val = this->at(startRow + i, startCol + j);
+                    block.set(i, j, val);
+                }
+            }
+            return block;
         }
 
         Matrix(unsigned int rows, unsigned int cols): rows(rows), cols(cols), data(rows*cols) {

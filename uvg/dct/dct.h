@@ -20,11 +20,11 @@
  * followed by invert() is unlikely to yield the exact input data.
  */
 namespace dct {
-    const auto BLOCK_DIMENSION = 8;
-    const auto BLOCK_CAPACITY = 64;
+    const unsigned int BLOCK_DIMENSION = 8;
+    const unsigned int BLOCK_CAPACITY = 64;
 
-    typedef std::array<unsigned char, BLOCK_CAPACITY> raw_block_t;
-    typedef std::array<int, BLOCK_CAPACITY> encoded_block_t;
+    typedef matrix::Matrix<unsigned char> raw_block_t; // Must be 8x8
+    typedef std::vector<int> encoded_block_t; // must be length 64 todo make this an int array instead
 
     /**
      * Holds accessors for various useful quantization matrixes.
