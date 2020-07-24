@@ -72,8 +72,8 @@ namespace matrix {
     Matrix<T> transpose(const Matrix<T>& m) {
         Matrix<T> mTranspose(m.cols, m.rows);
         for (int i = 0; i < m.rows; ++i) {
-            for (int j = 0; j < m.rows; ++j) {
-                mTranspose.set(i, j, m.at(j, i));
+            for (int j = 0; j < m.cols; ++j) {
+                mTranspose.set(j, i, m.at(i, j));
             }
         }
         return mTranspose;
