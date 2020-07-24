@@ -2,5 +2,4 @@
 Jamie Kirkwin
 
 ## Sources
-
-[Eigen library](http://eigen.tuxfamily.org/index.php?title=Main_Page) for DCT matrix operations.
+[Matrix Multiplication](https://mathworld.wolfram.com/MatrixMultiplication.html)
