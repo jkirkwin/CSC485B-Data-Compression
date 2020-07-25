@@ -9,6 +9,7 @@
     might be frowned upon under some style manuals)
 
    B. Bird - 05/13/2020
+   J. Kirkwin - 07/24/2020
 */ 
 
 #ifndef OUTPUT_STREAM_HPP
@@ -16,6 +17,7 @@
 
 #include <iostream>
 #include <cstdint>
+#include <boost/dynamic_bitset.hpp>
 
 /* These definitions are more reliable for fixed width types than using "int" and assuming its width */
 using u8 = std::uint8_t;
@@ -89,6 +91,13 @@ public:
             push_bit(fill_bit);
     }
 
+    /* Push the given bits from most to least significant
+     */
+    void push_bits_msb_first(const boost::dynamic_bitset<>& b) {
+        for (long i = (long)b.size() - 1; i >= 0; --i) {
+            push_bit(b[i]);
+        }
+    }
 
 private:
     void output_byte(){

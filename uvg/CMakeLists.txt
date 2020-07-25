@@ -13,13 +13,15 @@ include_directories(include) # Common utilities
 
 # Add sub-modules
 add_subdirectory(dct)
+add_subdirectory(delta)
+set(LIBS delta_lib dct_lib)
 
 # Compress and Decompress utilities
 add_executable(uvg_compress uvg_compress.cpp)
-target_link_libraries(uvg_compress dct_lib)
+target_link_libraries(uvg_compress ${LIBS})
 
 add_executable(uvg_decompress uvg_decompress.cpp)
-target_link_libraries(uvg_decompress dct_lib)
+target_link_libraries(uvg_decompress ${LIBS})
 
 # Add meta-target for convenience
 add_custom_target(uvg)

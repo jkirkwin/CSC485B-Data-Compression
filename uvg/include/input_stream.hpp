@@ -9,6 +9,7 @@
     might be frowned upon under some style manuals)
 
    B. Bird - 06/19/2020
+   J. Kirkwin - 07/24/2020
 */ 
 
 #ifndef INPUT_STREAM_HPP
@@ -22,8 +23,6 @@ using u8 = std::uint8_t;
 using u16 = std::uint16_t;
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
-
-
 
 class InputBitStream{
 public:
@@ -58,6 +57,18 @@ public:
         u32 result{};
         for (int i = 0; i < num_bits; i++)
             result |= read_bit()<<i;
+        return result;
+    }
+
+    /* Read the next num_bits bits and return them as a u32 with the first bit read
+     * treated as the most significant one.
+     */
+    u32 read_bits_msb_first(int num_bits) {
+        assert (num_bits >= 0);
+        u32 result {};
+        for (int i = 0; i < num_bits; ++i) {
+            result = (result << 1) | read_bit();
+        }
         return result;
     }
 
