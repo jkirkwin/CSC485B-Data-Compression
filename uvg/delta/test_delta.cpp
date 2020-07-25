@@ -55,7 +55,6 @@ TEST_CASE("Decode from bitstream", "") {
         std::ifstream fIn(filepath);
         InputBitStream inStream(fIn);
         auto result = decodeFromBitStream(inStream);
-        auto temp = decode(encoded);
         fIn.close();
 
         REQUIRE(size == result);

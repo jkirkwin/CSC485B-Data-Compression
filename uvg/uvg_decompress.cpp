@@ -24,11 +24,25 @@
 #include "uvg_common.hpp"
 #include "dct/dct.h"
 #include "matrix.h"
+#include "delta/delta.h"
 
 dct::encoded_block_t readEncodedBlock(InputBitStream& inputBitStream) {
     dct::encoded_block_t block;
-    for (int i = 0; i < dct::BLOCK_CAPACITY; ++i) {
-        block.push_back(inputBitStream.read_u32());
+
+    // The DC and first AC coefficients are sent as literals in 4 bytes.
+    const int dc = inputBitStream.read_u32();
+    block.push_back(dc);
+    const int ac0 = inputBitStream.read_u32();
+    block.push_back(ac0);
+
+    // The rest are encoded as deltas
+    int prev = ac0;
+    for (int i = 2; i < dct::BLOCK_CAPACITY; ++i) {
+        int diff = delta::decodeFromBitStream(inputBitStream);
+        int cur = prev + diff;
+        block.push_back(cur);
+
+        prev = cur;
     }
     return block;
 }
@@ -41,7 +55,7 @@ std::vector<dct::encoded_block_t> readEncodedBlocks(unsigned int n, InputBitStre
     return blocks;
 }
 
-unsigned int blocksToRead(unsigned int height, unsigned int width) {
+unsigned int numBlocksToRead(unsigned int height, unsigned int width) {
     //https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
     assert (height > 0 && width > 0);
     auto verticalPartitions = width / dct::BLOCK_DIMENSION + (width % dct::BLOCK_DIMENSION != 0);
@@ -77,11 +91,10 @@ void decompress(const std::string& input_filename, const std::string& output_fil
     unsigned int scaledWidth = (width+1)/2;
 
     // get the encoded blocks
-    // todo add delta decompression here.
-    auto yPlaneBlocks = blocksToRead(height, width);
+    auto yPlaneBlocks = numBlocksToRead(height, width);
     auto encodedYPlane = readEncodedBlocks(yPlaneBlocks, input_stream);
 
-    auto colourPlaneBlocks = blocksToRead(scaledHeight, scaledWidth);
+    auto colourPlaneBlocks = numBlocksToRead(scaledHeight, scaledWidth);
     auto encodedCbPlane = readEncodedBlocks(colourPlaneBlocks, input_stream);
     auto encodedCrPlane = readEncodedBlocks(colourPlaneBlocks, input_stream);
 

@@ -51,11 +51,15 @@ namespace delta {
 
     /**
      * Decode the given encoding into the original size.
+     *
+     * @return the original diff that was encoded.
      */
     long decode(const bitset& encoded);
 
     /**
      * Read the first encoded size from the bit stream and return it.
+     *
+     * @return the decoded diff.
      */
     long decodeFromBitStream(InputBitStream& inputBitStream);
 

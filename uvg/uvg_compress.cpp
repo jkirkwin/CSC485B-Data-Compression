@@ -26,6 +26,7 @@
 #include "uvg_common.hpp"
 #include "dct/dct.h"
 #include "matrix.h"
+#include "delta/delta.h"
 
 
 // An adapted version of the given function that uses matrix::Matrix.
@@ -56,13 +57,29 @@ matrix::Matrix<unsigned char> scaleDown(const matrix::Matrix<unsigned char>& inp
     return result;
 }
 
-void writeBlockLiterals(const std::vector<dct::encoded_block_t>& blocks, OutputBitStream& outputBitStream) {
+void writeBlocks(const std::vector<dct::encoded_block_t>& blocks, OutputBitStream& outputBitStream) {
     for (const auto& block : blocks) {
-        for (auto i : block) {
-            outputBitStream.push_u32(i);
+        assert (block.size() == dct::BLOCK_CAPACITY);
+
+        // Push the DC coefficient and the first AC coefficient as literals.
+        auto dc = block.front();
+        outputBitStream.push_u32(dc);
+        auto ac0 = block.at(1);
+        outputBitStream.push_u32(ac0);
+
+        // Push the remaining AC coefficients as deltas
+        auto prev = ac0;
+        for (int i = 2; i < block.size(); ++i) {
+            int cur = block.at(i);
+            int diff = cur - prev;
+            auto encodedDiff = delta::encode(diff);
+            outputBitStream.push_bits_msb_first(encodedDiff);
+
+            prev = cur;
         }
     }
 }
+
 
 void sendQualityLevel(dct::QualityLevel qualityLevel, OutputBitStream& outputBitStream) {
     auto numBits = 2;
@@ -115,12 +132,10 @@ void compress(const std::string& input_filename, const std::string& output_filen
     auto encodedCbPlane = dct::transform(scaledCbPlane, dct::quantize::chromanance(), qualityLevel);
     auto encodedCrPlane = dct::transform(scaledCrPlane, dct::quantize::chromanance(), qualityLevel);
 
-    // todo add delta compression here.
-
-    // Write the blocks as-is for testing
-    writeBlockLiterals(encodedYPlane, output_stream);
-    writeBlockLiterals(encodedCbPlane, output_stream);
-    writeBlockLiterals(encodedCrPlane, output_stream);
+    // Do delta compression and send the result.
+    writeBlocks(encodedYPlane, output_stream);
+    writeBlocks(encodedCbPlane, output_stream);
+    writeBlocks(encodedCrPlane, output_stream);
 
     output_stream.flush_to_byte();
     output_file.close();
