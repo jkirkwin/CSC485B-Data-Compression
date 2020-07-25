@@ -1,7 +1,5 @@
-#include <array>
 #include <cassert>
 #include <cmath>
-#include <iostream>
 #include "dct.h"
 #include <algorithm>
 
@@ -92,6 +90,32 @@ namespace dct {
         return quantized;
     }
 
+    const std::vector<int> permutationTable {
+            0,   1,  5,  6, 14, 15, 27, 28,
+            2,   4,  7, 13, 16, 26, 29, 42,
+            3,   8, 12, 17, 25, 30, 41, 43,
+            9,  11, 18, 24, 31, 40, 44, 53,
+            10, 19, 23, 32, 39, 45, 52, 54,
+            20, 22, 33, 38, 46, 51, 55, 60,
+            21, 34, 37, 47, 50, 56, 59, 61,
+            35, 36, 48, 49, 57, 58, 62, 63
+    };
+    encoded_block_t permuteBlock(const encoded_block_t& original) {
+        encoded_block_t permuted(original.size());
+        for (int i = 0; i < BLOCK_CAPACITY; ++i) {
+            permuted[permutationTable[i]] = original[i];
+        }
+        return permuted;
+    }
+
+    encoded_block_t unPermuteBlock(const encoded_block_t& permuted) {
+        encoded_block_t original(permuted.size());
+        for (int i = 0; i < BLOCK_CAPACITY; ++i) {
+            original[i] = permuted[permutationTable[i]];
+        }
+        return original;
+    }
+
     encoded_block_t encodeBlock(const raw_block_t& rawBlock, const quantize::quantizer_t& quantizer, QualityLevel quality) {
         // Apply DCT
         const auto rawFloatBlock = getFloatBlock(rawBlock);
@@ -101,9 +125,8 @@ namespace dct {
         // Quantize based on quality level provided
         auto quantized = quantizeDctResult(dctResult, quantizer, quality);
 
-        // todo linearize the block in a zigzag pattern
-        // for now just emit the blocks in row-major order.
-        return quantized;
+        // Re-order the coefficients in JPEG's zig zag pattern
+        return permuteBlock(quantized);
     }
 
     std::vector<encoded_block_t> transform(
@@ -179,12 +202,15 @@ namespace dct {
     raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t& quantizer, QualityLevel quality) {
         assert (block.size() == BLOCK_CAPACITY); // todo should really just use std::array<64>
 
+        // undo JPEG's zig-zag permutation
+        auto orderedBlock = unPermuteBlock(block);
+
         // construct the de-quantized DCT matrix
         matrix::Matrix<float> dctEncoded(BLOCK_DIMENSION, BLOCK_DIMENSION);
         for (int row = 0; row < BLOCK_DIMENSION; ++row) {
             for (int col = 0; col < BLOCK_DIMENSION; ++col) {
                 auto flattenedIndex = row * BLOCK_DIMENSION + col;
-                auto quantized = block.at(flattenedIndex); // T in the slides
+                auto quantized = orderedBlock.at(flattenedIndex); // T in the slides
                 auto scaledQuantizer = scaleQuantizerCoefficient(quantizer.at(row, col), quality, row, col);
                 auto deQuantized = quantized * scaledQuantizer; // D' in the slides
                 dctEncoded.set(row, col, deQuantized);
