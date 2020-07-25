@@ -1,6 +1,6 @@
 #!/bin/bash
 
-QUALITY=${1:-med}
+QUALITY=${1:-medium}
 RESULT_DIR=${2:-result_images}
 
 make

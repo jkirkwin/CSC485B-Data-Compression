@@ -355,7 +355,7 @@ int main(int argc, char ** argv) {
     if (quality == "low") {
         qualityLevel = dct::low;
     }
-    else if (quality == "med") {
+    else if (quality == "medium") {
         qualityLevel = dct::med;
     }
     else if (quality == "high") {
