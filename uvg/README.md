@@ -1,4 +1,4 @@
-# Assignment 4 - Imagae Compression (`uvg`)
+# Assignment 4 - Image Compression (`uvg`)
 Jamie Kirkwin
 
 ## Description
