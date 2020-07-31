@@ -1,0 +1,6 @@
+uvid_compress
+uvid_decompress
+test_files/
+cmake-build-debug/
+cmake-build-release/
+raw_videos/

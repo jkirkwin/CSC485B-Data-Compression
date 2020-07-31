@@ -14,3 +14,7 @@ All programming assignments were done in c++.
 
 # Assignment 4 - Image compression
 `uvg/` holds an implementation of a JPEG-influenced DCT-based .bmp image compressor and decompressor.
+
+# Assignment 5 - Video compression
+`uvid/` holds an implementation of a very simple video (no audio or other metadata) codec, based on
+the image codec mplemented in `uvg`.
