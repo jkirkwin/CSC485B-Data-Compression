@@ -20,8 +20,9 @@ namespace matrix {
             return data.at(row*cols + col);
         }
 
-        void set(unsigned int row, unsigned int col, T value) {
-            data.at(row*cols + col) = value;
+        // Used to set a value. Behaves like a non-const at that returns a reference.
+        T & set(unsigned int row, unsigned int col) {
+            return data.at(row*cols + col);
         }
 
         void insertBlock(unsigned int startRow, unsigned int startCol, const Matrix<T>& block) {
@@ -31,7 +32,7 @@ namespace matrix {
             for (int i = 0; i < block.rows; ++i) {
                 for (int j = 0; j < block.cols; ++j) {
                     auto val = block.at(i, j);
-                    set(startRow + i, startCol + j, val);
+                    set(startRow + i, startCol + j) = val;
                 }
             }
         }
@@ -48,7 +49,7 @@ namespace matrix {
             for (int i = 0; i < block.rows; ++i) {
                 for (int j = 0; j < block.cols; ++j) {
                     auto val = this->at(startRow + i, startCol + j);
-                    block.set(i, j, val);
+                    block.set(i, j) = val;
                 }
             }
             return block;
@@ -73,7 +74,7 @@ namespace matrix {
         Matrix<T> mTranspose(m.cols, m.rows);
         for (int i = 0; i < m.rows; ++i) {
             for (int j = 0; j < m.cols; ++j) {
-                mTranspose.set(j, i, m.at(i, j));
+                mTranspose.set(j, i) = m.at(i, j);
             }
         }
         return mTranspose;
@@ -92,7 +93,7 @@ namespace matrix {
                 for (int k = 0; k < lhs.cols; ++k) {
                     sum += lhs.at(i, k) * rhs.at(k, j);
                 }
-                result.set(i, j, sum);
+                result.set(i, j) = sum;
             }
         }
         return result;

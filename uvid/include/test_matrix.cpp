@@ -92,3 +92,16 @@ TEST_CASE("Matrix block operations", "") {
         }
     }
 }
+
+TEST_CASE("getting and setting cell value") {
+    std::vector<int> data(4);
+    for (int i = 0; i < 4; ++i) {
+        data.at(i) = i;
+    }
+
+    matrix::Matrix<int> m(2, 2, data);
+
+    REQUIRE(m.at(0,0) == 0);
+    m.set(0,0) = -1;
+    REQUIRE(m.at(0,0) == -1);
+}

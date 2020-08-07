@@ -5,7 +5,6 @@
 
 namespace dct {
 
-    // Computed with gen_dct_matrix.cpp
     const std::vector<float> dctMatrixData {
         0.353553, 0.353553, 0.353553, 0.353553, 0.353553, 0.353553, 0.353553, 0.353553,
         0.490393, 0.415735, 0.277785, 0.0975452, -0.0975452, -0.277785, -0.415735, -0.490393,
@@ -152,7 +151,7 @@ namespace dct {
                 for (int i = 0; i < numRows; ++i) {
                     for (int j = 0; j < numCols; ++j) {
                         auto inputValue = inputMatrix.at(row + i, col + j);
-                        rawBlock.set(i, j, inputValue);
+                        rawBlock.set(i, j) = inputValue;
                     }
                 }
 
@@ -213,7 +212,7 @@ namespace dct {
                 auto quantized = orderedBlock.at(flattenedIndex); // T in the slides
                 auto scaledQuantizer = scaleQuantizerCoefficient(quantizer.at(row, col), quality, row, col);
                 auto deQuantized = quantized * scaledQuantizer; // D' in the slides
-                dctEncoded.set(row, col, deQuantized);
+                dctEncoded.set(row, col) = deQuantized;
             }
         }
 
