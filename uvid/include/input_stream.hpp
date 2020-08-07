@@ -9,7 +9,7 @@
     might be frowned upon under some style manuals)
 
    B. Bird - 06/19/2020
-   J. Kirkwin - 07/24/2020
+   J. Kirkwin - 08/07/2020
 */ 
 
 #ifndef INPUT_STREAM_HPP
@@ -23,6 +23,8 @@ using u8 = std::uint8_t;
 using u16 = std::uint16_t;
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
+
+
 
 class InputBitStream{
 public:
@@ -40,12 +42,12 @@ public:
         return read_bits(8);
     }
 
-    /* Read a 32 bit unsigned integer value (LSB first) */
+    /* Push a 32 bit unsigned integer value (LSB first) */
     u32 read_u32(){
         return read_bits(8) | (read_bits(8)<<8) | (read_bits(8)<<16) | (read_bits(8)<<24);
     }
 
-    /* Read a 16 bit unsigned short value (LSB first) */
+    /* Push a 16 bit unsigned short value (LSB first) */
     u16 read_u16(){
         return read_bits(8) | (read_bits(8)<<8);
     }
@@ -87,7 +89,7 @@ public:
         return last_real_bit;
     }
 
-    /* Flush the currently stored bits*/
+    /* Flush the currently stored bits to the output stream */
     void flush_to_byte(){
         numbits = 8; //Force the next read to read a byte from the input file
     }

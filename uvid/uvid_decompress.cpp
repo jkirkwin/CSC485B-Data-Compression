@@ -23,7 +23,7 @@
 #include <cstdint>
 #include <tuple>
 #include "input_stream.hpp"
-#include "yuv_stream.hpp"
+#include "include/yuv_stream.hpp"
 
 
 int main(int argc, char** argv){
@@ -38,8 +38,16 @@ int main(int argc, char** argv){
 
     YUVStreamWriter writer {std::cout, width, height};
 
-    while (input_stream.read_byte()){
+    while (input_stream.read_byte()){ // Reading the single-byte continuation flag
         YUVFrame420& frame = writer.frame();
+
+        // todo decode the frame from the input stream a la a4.
+        //      For each plane:
+        //          - invert the differential/variable bit encoding
+        //          - invert the quantization
+        //          - invert the dct
+        //          - write the plane into the frame object
+
         for (u32 y = 0; y < height; y++)
             for (u32 x = 0; x < width; x++)
                 frame.Y(x,y) = input_stream.read_byte();

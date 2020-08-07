@@ -24,7 +24,7 @@
 #include <cstdint>
 #include <tuple>
 #include "output_stream.hpp"
-#include "yuv_stream.hpp"
+#include "include/yuv_stream.hpp"
 
 
 int main(int argc, char** argv){
@@ -44,8 +44,16 @@ int main(int argc, char** argv){
     output_stream.push_u32(width);
 
     while (reader.read_next_frame()){
+        // todo consider reducing the size of the continuation flag. We could probably just use a single bit?
         output_stream.push_byte(1); //Use a one byte flag to indicate whether there is a frame here
         YUVFrame420& frame = reader.frame();
+
+        // todo comopress the frame using a DCT as done in A4.
+        //      the frame has already been subsampled - don't do that again.
+        //          - Run DCT on each plane
+        //          - Quantize the resulting coefficients
+        //          - Use delta compression / variable bit encoding
+
         for (u32 y = 0; y < height; y++)
             for (u32 x = 0; x < width; x++)
                 output_stream.push_byte(frame.Y(x,y));
