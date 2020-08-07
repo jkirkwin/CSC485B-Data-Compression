@@ -3,7 +3,6 @@
 #include "catch.hpp"
 #include "matrix.h"
 
-// todo rename to test_matrix and move to include dir
 // Examples from https://matrix.reshish.com/
 TEST_CASE("Matrix Transpose", "") {
     using namespace matrix;

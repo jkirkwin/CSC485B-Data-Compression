@@ -14,6 +14,7 @@ include_directories(include) # Common utilities
 # Add sub-modules
 add_subdirectory(dct)
 add_subdirectory(delta) # todo rename this to "binary"?
+add_subdirectory(include) # Add tests for common headers
 #set(LIBS delta_lib dct_lib)
 
 # Compress and Decompress utilities
