@@ -6,7 +6,7 @@ then
     exit 1
 fi
 
-height=$1
-width=$2
+width=$1
+height=$2
 
-ffplay -f rawvideo -pixel_format yuv420p -framerate 30 -video_size ${height}x${width} -
+ffplay -f rawvideo -pixel_format yuv420p -framerate 30 -video_size ${width}x${height} -

@@ -9,12 +9,12 @@ then
 fi
 
 outfile=$1
+width=$1
 height=$2
-width=$3
 
->&2 echo "Converting raw file with dimensions ${height}x${width} to y4m format. Saving as ${outfile}." 
+>&2 echo "Converting raw file with dimensions ${width}x${height} to y4m format. Saving as ${outfile}."
 
-ffmpeg -f rawvideo -pixel_format yuv420p -framerate 30 -video_size ${height}x${width} -i - -f yuv4mpegpipe $outfile
+ffmpeg -f rawvideo -pixel_format yuv420p -framerate 30 -video_size ${width}x${height} -i - -f yuv4mpegpipe $outfile
 
 if [ $? -ne 0 ]
 then

@@ -10,11 +10,11 @@ then
         exit 1
     fi
 
-    height=$1
-    width=$2
+    width=$1
+    height=$2
     quality=$3
 
-    cat - | ./uvid_compress $height $width $quality | ./uvid_decompress
+    cat - | ./uvid_compress $width $height $quality | ./uvid_decompress
 
 else
     >&2 echo "Cannot locate codec executables. Did you build?" 
