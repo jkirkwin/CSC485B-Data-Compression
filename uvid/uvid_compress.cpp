@@ -61,16 +61,26 @@ void sendQualityLevel(dct::QualityLevel qualityLevel, OutputBitStream& outputBit
     }
 }
 
-void writeBlock(const dct::encoded_block_t& block, OutputBitStream& outputBitStream) {
-    // todo use delta encoding here
-    for (const u32 coefficient : block) {
-        outputBitStream.push_u32(coefficient);
-    }
-}
-
 void writeBlocks(const std::vector<dct::encoded_block_t>& blocks, OutputBitStream& outputBitStream) {
     for (const auto& block : blocks) {
-        writeBlock(block, outputBitStream);
+        assert (block.size() == dct::BLOCK_CAPACITY);
+
+        // Push the DC coefficient and the first AC coefficient as literals.
+        auto dc = block.front();
+        outputBitStream.push_u32(dc);
+        auto ac0 = block.at(1);
+        outputBitStream.push_u32(ac0);
+
+        // Push the remaining AC coefficients as deltas
+        auto prev = ac0;
+        for (int i = 2; i < block.size(); ++i) {
+            int cur = block.at(i);
+            int diff = cur - prev;
+            auto encodedDiff = delta::encode(diff);
+            outputBitStream.push_bits_msb_first(encodedDiff);
+
+            prev = cur;
+        }
     }
 }
 

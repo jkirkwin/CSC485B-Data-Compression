@@ -45,11 +45,22 @@ dct::QualityLevel getQualityLevel(InputBitStream &inputBitStream) {
 
 dct::encoded_block_t readEncodedBlock(InputBitStream& inputBitStream) {
     dct::encoded_block_t block;
-    // todo decode delta encoding
-    for (u32 i = 0; i < dct::BLOCK_CAPACITY; ++i) {
-        block.push_back(inputBitStream.read_u32());
-    }
 
+    // The DC and first AC coefficients are sent as literals in 4 bytes.
+    const int dc = inputBitStream.read_u32();
+    block.push_back(dc);
+    const int ac0 = inputBitStream.read_u32();
+    block.push_back(ac0);
+
+    // The rest are encoded as deltas
+    int prev = ac0;
+    for (int i = 2; i < dct::BLOCK_CAPACITY; ++i) {
+        int diff = delta::decodeFromBitStream(inputBitStream);
+        int cur = prev + diff;
+        block.push_back(cur);
+
+        prev = cur;
+    }
     return block;
 }
 
