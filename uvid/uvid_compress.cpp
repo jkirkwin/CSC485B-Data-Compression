@@ -29,6 +29,37 @@
 #include "yuv_stream.hpp"
 #include "dct/dct.h"
 #include "delta/delta.h"
+#include <stdexcept>
+
+dct::QualityLevel getQualityLevel(const std::string& qualityString) {
+    if (qualityString == "low") {
+        return dct::low;
+    }
+    else if (qualityString == "medium") {
+        return dct::med;
+    }
+    else if (qualityString == "high") {
+        return dct::high;
+    }
+    else {
+        std::cerr << "Bad quality level provided: '" << qualityString << "'. Acceptable values are 'low', 'medium', and 'high'" << std::endl;
+        throw std::invalid_argument("Bad quality level");
+    }
+}
+
+void sendQualityLevel(dct::QualityLevel qualityLevel, OutputBitStream& outputBitStream) {
+    auto numBits = 2;
+    if (qualityLevel == dct::low) {
+        outputBitStream.push_bits(0, numBits);
+    }
+    else if(qualityLevel == dct::med) {
+        outputBitStream.push_bits(1, numBits);
+    }
+    else {
+        assert (qualityLevel == dct::high);
+        outputBitStream.push_bits(2, numBits);
+    }
+}
 
 void writeBlock(const dct::encoded_block_t& block, OutputBitStream& outputBitStream) {
     // todo use delta encoding here
@@ -51,7 +82,7 @@ int main(int argc, char** argv){
     }
     u32 width = std::stoi(argv[1]);
     u32 height = std::stoi(argv[2]);
-    std::string quality{argv[3]};
+    dct::QualityLevel qualityLevel = getQualityLevel(argv[3]);
 
     u32 scaledWidth = width/2;
     u32 scaledHeight = height/2;
@@ -59,9 +90,12 @@ int main(int argc, char** argv){
     YUVStreamReader reader {std::cin, width, height};
     OutputBitStream output_stream {std::cout};
 
+    // Push header fields
     output_stream.push_u32(height);
     output_stream.push_u32(width);
+    sendQualityLevel(qualityLevel, output_stream);
 
+    // Read each frame of video, encode it, and push the encoding.
     while (reader.read_next_frame()){
         // todo consider reducing the size of the continuation flag. We could probably just use a single bit?
         output_stream.push_byte(1); //Use a one byte flag to indicate whether there is another frame of video
@@ -88,7 +122,6 @@ int main(int argc, char** argv){
         // todo consider changing the frame object to use a matrix internally
 
         // Run the DCT on each plane in the frame and quantize the coefficients
-        const auto qualityLevel = dct::med; // todo parameterize the quality parameter based on argument and add it to the bitstream
         auto encodedYPlane = dct::transform(yPlane, dct::quantize::luminance(), qualityLevel);
         auto encodedCbPlane = dct::transform(cbPlane, dct::quantize::chromanance(), qualityLevel);
         auto encodedCrPlane = dct::transform(crPlane, dct::quantize::chromanance(), qualityLevel);

@@ -29,6 +29,20 @@
 #include "dct/dct.h"
 #include "delta/delta.h"
 
+dct::QualityLevel getQualityLevel(InputBitStream &inputBitStream) {
+    auto encoded = inputBitStream.read_bits(2);
+    assert (encoded != 3);
+    if (encoded == 0) {
+        return dct::low;
+    }
+    else if (encoded == 1) {
+        return dct::med;
+    }
+    else {
+        return dct::high;
+    }
+}
+
 dct::encoded_block_t readEncodedBlock(InputBitStream& inputBitStream) {
     dct::encoded_block_t block;
     // todo decode delta encoding
@@ -63,14 +77,17 @@ int main(int argc, char** argv){
     
     InputBitStream input_stream {std::cin};
 
+    // Read header fields
     u32 height {input_stream.read_u32()};
     u32 width {input_stream.read_u32()};
+    auto qualityLevel = getQualityLevel(input_stream);
 
     u32 scaledHeight = height/2; // todo used +1 in uvg?
     u32 scaledWidth = width/2;
 
     YUVStreamWriter writer {std::cout, width, height};
 
+    // Read each frame, decode it, and write it out
     while (input_stream.read_byte()){ // Reading the single-byte continuation flag
         YUVFrame420& frame = writer.frame();
 
@@ -83,7 +100,6 @@ int main(int argc, char** argv){
         auto crBlocks = readEncodedBlocks(colourBlockCount, input_stream);
 
         // Invert the DCT/quantization
-        const auto qualityLevel = dct::med; // todo pull this from the bitstream
         auto yContext = dct::luminanceContext(height, width);
         auto yPlane = dct::invert(yBlocks, yContext, qualityLevel);
         auto colourContext = dct::chromananceContext(scaledHeight, scaledWidth);
@@ -104,7 +120,6 @@ int main(int argc, char** argv){
         }
         writer.write_frame();
     }
-
 
     return 0;
 }
