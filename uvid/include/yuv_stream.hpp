@@ -12,6 +12,7 @@
    Recall that YUV is a misnomer (it's actually YCbCr since YUV is an analog encoding)
 
    B. Bird - 04/07/2020
+   J. Kirkwin - 08/07/2020
 */
 
 #ifndef YUV_STREAM_HPP
@@ -35,25 +36,19 @@ public:
         Cr_data.resize(width*height/(chroma_ratio_x*chroma_ratio_y));
     }
     unsigned char& Y(unsigned int x, unsigned int y){
-        if (y >= height)
-            y = height-1;
-        if (x >= width)
-            x = width-1;
+        assert (y < height);
+        assert (x < width);
         return Y_data.at(y*width+x);
     }
     //Note that the coordinate systems for Cb and Cr are distinct from Y (e.g. in 4:2:0, the chroma values for Y pixel (10,10) are at Cb/Cr coordinates (5,5))
     unsigned char& Cb(unsigned int x, unsigned int y){
-        if (y >= height/chroma_ratio_y)
-            y = height/chroma_ratio_y-1;
-        if (x >= width/chroma_ratio_x)
-            x = width/chroma_ratio_x-1;
+        assert (y < height/chroma_ratio_y);
+        assert (x < width/chroma_ratio_x);
         return Cb_data.at(y*width/chroma_ratio_x + x);
     }
     unsigned char& Cr(unsigned int x, unsigned int y){
-        if (y >= height/chroma_ratio_y)
-            y = height/chroma_ratio_y-1;
-        if (x >= width/chroma_ratio_x)
-            x = width/chroma_ratio_x-1;
+        assert (y < height/chroma_ratio_y);
+        assert (x < width/chroma_ratio_x);
         return Cr_data.at(y*width/chroma_ratio_x + x);
     }
 private:
