@@ -3,7 +3,7 @@ CXXFLAGS=-O3 -Wall -std=c++17 $(EXTRA_CXXFLAGS)
 CFLAGS=-O3 -Wall -std=c11 $(EXTRA_CFLAGS)
 CXX=g++
 CC=$(CXX) # Hack to allow implicit rules to link with g++
-OBJECTS=delta.o dct.o # Todo rename lib
+OBJECTS=delta.o dct.o uvid_decode.o # Todo rename delta lib?
 TEST_BINARIES=
 BINARIES=$(TEST_BINARIES) uvid_compress uvid_decompress
 

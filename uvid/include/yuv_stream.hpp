@@ -21,6 +21,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <cassert>
 
 class YUVStreamReader;
 class YUVStreamWriter;

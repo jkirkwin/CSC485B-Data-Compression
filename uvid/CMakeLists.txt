@@ -15,9 +15,14 @@ include_directories(include) # Common utilities
 add_subdirectory(dct)
 add_subdirectory(delta) # todo rename this to "binary"?
 add_subdirectory(include) # Add tests for common headers
-set(LIBS delta_lib dct_lib)
+
+# Shared decompression logic
+add_library(decode uvid_decode.cpp uvid_decode.h)
+
 
 # Compress and Decompress utilities
+set(LIBS delta_lib dct_lib)
+
 add_executable(uvid_compress uvid_compress.cpp)
 target_link_libraries(uvid_compress ${LIBS})
 
