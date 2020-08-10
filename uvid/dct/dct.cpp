@@ -33,6 +33,7 @@ namespace dct {
     raw_block_t getRawBlockFromFloat(const matrix::Matrix<float>& block) {
         // https://stackoverflow.com/questions/6399090/c-convert-vectorint-to-vectordouble
 
+        // todo this may be causing issues with P-Frames.
         std::vector<unsigned char> byteData;
         for (auto f : block.data) {
             // ensure that we don't wrap around on out-of-range values
