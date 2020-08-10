@@ -10,9 +10,9 @@ namespace decode {
     struct CompressedIFrame {
         typedef std::vector<dct::encoded_block_t> plane_t;
         int height, width;
-        plane_t *y, *cb, *cr;
+        plane_t y, cb, cr;
 
-        CompressedIFrame(u32 h, u32 w, plane_t *y, plane_t *cb, plane_t *cr) :
+        CompressedIFrame(u32 h, u32 w, plane_t& y, plane_t& cb, plane_t& cr) :
             height(h), width(w), y(y), cb(cb), cr(cr) {
         }
     };

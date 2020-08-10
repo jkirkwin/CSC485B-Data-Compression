@@ -82,6 +82,20 @@ unsigned int numBlocksToRead(unsigned int height, unsigned int width) {
     return result;
 }
 
+decode::CompressedIFrame readIFrame(InputBitStream& inputBitStream, u32 height, u32 width) {
+    // Read in the quantized coefficients for the Y plane
+    auto luminanceBlockCount = numBlocksToRead(height, width);
+    auto yBlocks = readEncodedBlocks(luminanceBlockCount, inputBitStream);
+
+    // Read in the quantized coefficients for the Cb and Cr planes
+    auto colourBlockCount = numBlocksToRead(height/2, width/2);
+    auto cbBlocks = readEncodedBlocks(colourBlockCount, inputBitStream);
+    auto crBlocks = readEncodedBlocks(colourBlockCount, inputBitStream);
+
+    // Package up and return the result
+    return decode::CompressedIFrame(height, width, yBlocks, cbBlocks, crBlocks);
+}
+
 int main(int argc, char** argv) {
     InputBitStream input_stream {std::cin};
 
@@ -97,18 +111,10 @@ int main(int argc, char** argv) {
 
     // Read each frame, decode it, and write it out
     while (input_stream.read_byte()){ // Reading the single-byte continuation flag
-        YUVFrame420& yuvFrame = writer.frame();
-
-        // Read in the quantized coefficients for each plane
-        auto luminanceBlockCount = numBlocksToRead(height, width);
-        auto yBlocks = readEncodedBlocks(luminanceBlockCount, input_stream);
-
-        auto colourBlockCount = numBlocksToRead(scaledHeight, scaledWidth);
-        auto cbBlocks = readEncodedBlocks(colourBlockCount, input_stream);
-        auto crBlocks = readEncodedBlocks(colourBlockCount, input_stream);
 
         // Construct and write the decoded YCbCr frame
-        decode::CompressedIFrame iFrame(height, width, &yBlocks, &cbBlocks, &crBlocks);
+        auto iFrame = readIFrame(input_stream, height, width);
+        YUVFrame420& yuvFrame = writer.frame();
         decode::IFrameToYCbCr(iFrame, yuvFrame, qualityLevel);
         writer.write_frame();
     }

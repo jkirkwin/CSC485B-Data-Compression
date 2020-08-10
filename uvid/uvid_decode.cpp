@@ -13,11 +13,11 @@ namespace decode {
         int scaledHeight = height / 2, scaledWidth = width / 2;
 
         auto yContext = dct::luminanceContext(height, width);
-        auto yPlane = dct::invert(*iFrame.y, yContext, qualityLevel);
+        auto yPlane = dct::invert(iFrame.y, yContext, qualityLevel);
 
         auto colourContext = dct::chromananceContext(scaledHeight, scaledWidth);
-        auto cbPlane = dct::invert(*iFrame.cb, colourContext, qualityLevel);
-        auto crPlane = dct::invert(*iFrame.cr, colourContext, qualityLevel);
+        auto cbPlane = dct::invert(iFrame.cb, colourContext, qualityLevel);
+        auto crPlane = dct::invert(iFrame.cr, colourContext, qualityLevel);
 
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
