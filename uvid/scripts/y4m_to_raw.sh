@@ -17,7 +17,7 @@ then
 
     if [ $? -ne 0 ]
     then
-        >&2 echo "COMMAND FAILED" 
+        >&2 echo "COMMAND FAILED - unable to convert y4m to raw"
         exit 3
     fi
 else 

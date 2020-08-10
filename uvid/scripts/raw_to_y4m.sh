@@ -4,7 +4,7 @@
 
 if [ "$#" -ne 3 ]
 then
-    echo "Provide output file name and video resolution."
+    >&2 echo "Provide output file name and video resolution."
     exit 1
 fi
 
@@ -18,7 +18,7 @@ ffmpeg -f rawvideo -pixel_format yuv420p -framerate 30 -video_size ${width}x${he
 
 if [ $? -ne 0 ]
 then
-    >&2 echo "COMMAND FAILED" 
+    >&2 echo "COMMAND FAILED - Unable to convert raw file to y4m"
     exit 3
 fi
 
