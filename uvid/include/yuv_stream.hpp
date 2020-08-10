@@ -22,6 +22,7 @@
 #include <vector>
 #include <array>
 #include <cassert>
+#include "matrix.h"
 
 class YUVStreamReader;
 class YUVStreamWriter;
@@ -36,22 +37,38 @@ public:
         Cb_data.resize(width*height/(chroma_ratio_x*chroma_ratio_y));
         Cr_data.resize(width*height/(chroma_ratio_x*chroma_ratio_y));
     }
+
     unsigned char& Y(unsigned int x, unsigned int y){
         assert (y < height);
         assert (x < width);
         return Y_data.at(y*width+x);
     }
+
     //Note that the coordinate systems for Cb and Cr are distinct from Y (e.g. in 4:2:0, the chroma values for Y pixel (10,10) are at Cb/Cr coordinates (5,5))
     unsigned char& Cb(unsigned int x, unsigned int y){
         assert (y < height/chroma_ratio_y);
         assert (x < width/chroma_ratio_x);
         return Cb_data.at(y*width/chroma_ratio_x + x);
     }
+
     unsigned char& Cr(unsigned int x, unsigned int y){
         assert (y < height/chroma_ratio_y);
         assert (x < width/chroma_ratio_x);
         return Cr_data.at(y*width/chroma_ratio_x + x);
     }
+
+    // todo remove the getPlane methods and use a matrix internally instead.
+    typedef matrix::Matrix<unsigned char> plane_t;
+    plane_t getYPlane() {
+        return plane_t(height, width, Y_data);
+    }
+    plane_t getCbPlane() {
+        return plane_t(height/chroma_ratio_y, width/chroma_ratio_x, Cb_data);
+    }
+    plane_t getCrPlane() {
+        return plane_t(height/chroma_ratio_y, width/chroma_ratio_x, Cr_data);
+    }
+
 private:
     unsigned int width, height;
     std::vector<unsigned char> Y_data, Cb_data, Cr_data;
