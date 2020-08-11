@@ -104,18 +104,14 @@ int main(int argc, char** argv) {
     u32 width {input_stream.read_u32()};
     auto qualityLevel = getQualityLevel(input_stream);
 
-    u32 scaledHeight = height/2; // todo used +1 in uvg?
-    u32 scaledWidth = width/2;
-
     YUVStreamWriter writer {std::cout, width, height};
 
     // Read each frame, decode it, and write it out
-    while (input_stream.read_byte()){ // Reading the single-byte continuation flag
-
-        // Construct and write the decoded YCbCr frame
+    while (input_stream.read_byte()){ // Check the single-byte continuation flag
         auto iFrame = readIFrame(input_stream, height, width);
-        YUVFrame420& yuvFrame = writer.frame();
-        decode::IFrameToYCbCr(iFrame, yuvFrame, qualityLevel);
+        auto& resultFrame = writer.frame();
+        decode::IFrameToYCbCr(iFrame, resultFrame, qualityLevel);
+
         writer.write_frame();
     }
 

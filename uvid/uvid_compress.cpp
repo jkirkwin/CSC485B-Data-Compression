@@ -105,20 +105,12 @@ void pushIFrame(OutputBitStream& outputBitStream, decode::CompressedIFrame& iFra
     writeBlocks(iFrame.cr, outputBitStream);
 }
 
-int main(int argc, char** argv){
-
-    if (argc < 4){
-        std::cerr << "Usage: " << argv[0] << " <width> <height> <low/medium/high>" << std::endl;
-        return 1;
-    }
-    u32 width = std::stoi(argv[1]);
-    u32 height = std::stoi(argv[2]);
-    dct::QualityLevel qualityLevel = getQualityLevel(argv[3]);
-
+void compress(u32 width, u32 height, dct::QualityLevel qualityLevel){
+    // Initialize input and output streams
     YUVStreamReader reader {std::cin, width, height};
     OutputBitStream output_stream {std::cout};
 
-    // Push header fields
+    // Push metadata
     output_stream.push_u32(height);
     output_stream.push_u32(width);
     sendQualityLevel(qualityLevel, output_stream);
@@ -138,6 +130,16 @@ int main(int argc, char** argv){
 
     output_stream.push_byte(0); //Flag to indicate end of data
     output_stream.flush_to_byte();
+}
 
-    return 0;
+int main(int argc, char** argv) {
+    if (argc < 4){
+        std::cerr << "Usage: " << argv[0] << " <width> <height> <low/medium/high>" << std::endl;
+        return 1;
+    }
+
+    u32 width = std::stoi(argv[1]);
+    u32 height = std::stoi(argv[2]);
+    dct::QualityLevel qualityLevel = getQualityLevel(argv[3]);
+    compress(width, height, qualityLevel);
 }
