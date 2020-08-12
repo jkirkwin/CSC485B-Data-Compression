@@ -105,41 +105,143 @@ void pushIFrame(OutputBitStream& outputBitStream, decode::CompressedIFrame& iFra
     writeBlocks(iFrame.cr, outputBitStream);
 }
 
-void compress(u32 width, u32 height, dct::QualityLevel qualityLevel){
-    // Initialize input and output streams
-    YUVStreamReader reader {std::cin, width, height};
-    OutputBitStream output_stream {std::cout};
+decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previousFrame, dct::QualityLevel qualityLevel) {
+    auto height = inputFrame.getYPlane().rows;
+    auto width = inputFrame.getYPlane().cols;
+    auto scaledHeight = inputFrame.getCbPlane().rows;
+    auto scaledWidth = inputFrame.getCbPlane().cols;
 
+    auto y = inputFrame.getYPlane();
+    auto cb = inputFrame.getCbPlane();
+    auto cr = inputFrame.getCrPlane();
+
+    // todo add back the diff-ing once macroblocks/motion vectors are added to the bitstream.
+//    matrix::Matrix<unsigned char> y(height, width);
+//    matrix::Matrix<unsigned char> cb(scaledHeight, scaledWidth);
+//    matrix::Matrix<unsigned char> cr(scaledHeight, scaledWidth);
+//    for (u32 row = 0; row < height; ++row) {
+//        for (u32 col = 0; col < width; ++col) {
+//            y.set(row, col) = inputFrame.Y(col, row) - previousFrame.Y(col, row);
+//            y.set(row, col) = inputFrame.Y(col, row) - previousFrame.Y(col, row);
+//        }
+//    }
+//    for (u32 row = 0; row < scaledHeight; ++row) {
+//        for (u32 col = 0; col < scaledWidth; ++col) {
+//            cb.set(row, col) = inputFrame.Cb(col, row) - previousFrame.Cb(col, row);
+//            cr.set(row, col) = inputFrame.Cr(col, row) - previousFrame.Cr(col, row);
+//        }
+//    }
+
+    auto encodedYPlane = dct::transform(y, dct::quantize::luminance(), qualityLevel);
+    auto encodedCbPlane = dct::transform(cb, dct::quantize::chromanance(), qualityLevel);
+    auto encodedCrPlane = dct::transform(cr, dct::quantize::chromanance(), qualityLevel);
+
+    // We aren't doing any diff-ing, so we generate un-predicted macroblock headers
+    decode::MacroblockHeader unpredictedHeader {false, 0, 0};
+    std::vector<decode::MacroblockHeader> macroblockHeaders(encodedCbPlane.size(), unpredictedHeader);
+
+    return decode::CompressedPFrame(height, width, encodedYPlane, encodedCbPlane, encodedCrPlane, macroblockHeaders);
+}
+
+void pushMacroblock(OutputBitStream& outputBitStream, decode::MacroblockHeader header) {
+    if (header.predicted) {
+        // Signal that the macroblock is predicted
+        outputBitStream.push_bit(1);
+
+        // Push a variable-bit encoding for the motion vector components
+        auto encodedX = delta::encode(header.motionVectorX);
+        auto encodedY = delta::encode(header.motionVectorY);
+        outputBitStream.push_bits_msb_first(encodedX);
+        outputBitStream.push_bits_msb_first(encodedY);
+    }
+    else {
+        // Signal the the macroblock is not predicted
+        outputBitStream.push_bit(0);
+    }
+}
+
+void pushPFrame(OutputBitStream& outputBitStream, decode::CompressedPFrame& pFrame) {
+    // Push the header for each macroblock first, then push the planes
+    for (const auto& header : pFrame.macroblockHeaders) {
+        pushMacroblock(outputBitStream, header);
+    }
+
+    writeBlocks(pFrame.y, outputBitStream);
+    writeBlocks(pFrame.cb, outputBitStream);
+    writeBlocks(pFrame.cr, outputBitStream);
+}
+
+
+void compress(u32 width, u32 height, dct::QualityLevel qualityLevel, YUVStreamReader& reader, OutputBitStream& outputBitStream){
     // Push metadata
-    output_stream.push_u32(height);
-    output_stream.push_u32(width);
-    sendQualityLevel(qualityLevel, output_stream);
+    outputBitStream.push_u32(height);
+    outputBitStream.push_u32(width);
+    sendQualityLevel(qualityLevel, outputBitStream);
+
+    // Read the first frame and encode it as an I-Frame
+    assert (reader.read_next_frame());
+    outputBitStream.push_byte(1); // Continuation flag
+    auto iFrame = getIFrame(reader.frame(), qualityLevel);
+    pushIFrame(outputBitStream, iFrame);
+
+    // Continually store the __decoded__ version of each frame in order to
+    // generate P-Frames
+    auto previous = decode::IFrameToYCbCr(iFrame, qualityLevel);
 
     // Read each frame of video, encode it, and push the encoding.
     while (reader.read_next_frame()){
         // Push a one byte flag to indicate there is another frame of video
         // todo consider reducing the size of the continuation flag.
         //  We could probably just use a single bit
-        output_stream.push_byte(1);
+        outputBitStream.push_byte(1);
 
         // Read in the next frame, encode it, and push the encoding
-        YUVFrame420& frame = reader.frame();
-        auto iFrame = getIFrame(frame, qualityLevel);
-        pushIFrame(output_stream, iFrame);
+        YUVFrame420& nextFrame = reader.frame();
+        auto pFrame = getPFrame(nextFrame, previous, qualityLevel);
+        pushPFrame(outputBitStream, pFrame);
+
+        // Cache the decoded version of the last frame for future P-Frames
+        auto decoded = decode::PFrameToYCbCr(pFrame, previous, qualityLevel);
+        previous = decoded;
     }
 
-    output_stream.push_byte(0); //Flag to indicate end of data
-    output_stream.flush_to_byte();
+    outputBitStream.push_byte(0); // Flag to indicate end of data
+    outputBitStream.flush_to_byte();
 }
 
+//int NOT_MAIN(int argc, char** argv) {
 int main(int argc, char** argv) {
+    // Read arguments
     if (argc < 4){
         std::cerr << "Usage: " << argv[0] << " <width> <height> <low/medium/high>" << std::endl;
         return 1;
     }
-
     u32 width = std::stoi(argv[1]);
     u32 height = std::stoi(argv[2]);
     dct::QualityLevel qualityLevel = getQualityLevel(argv[3]);
-    compress(width, height, qualityLevel);
+
+    YUVStreamReader reader {std::cin, width, height};
+    OutputBitStream outputBitStream {std::cout};
+
+    compress(width, height, qualityLevel, reader, outputBitStream);
+
+    return 0;
+}
+
+
+// A dummy main() for debugging
+//int main(int argc, char** argv) {
+int dummy(int argc, char** argv) {
+    u32 width = 352, height = 288;
+    auto qualityLevel = dct::med;
+
+    auto filepath = "/home/jamie/csc485/CSC485B-Data-Compression/uvid/raw_videos/flower_352x288.raw";
+    std::fstream infile(filepath);
+
+    YUVStreamReader reader {infile, width, height};
+    OutputBitStream outputBitStream {std::cout};
+
+    compress(width, height, qualityLevel, reader, outputBitStream);
+
+    return 0;
 }

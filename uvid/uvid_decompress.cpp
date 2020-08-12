@@ -82,38 +82,96 @@ unsigned int numBlocksToRead(unsigned int height, unsigned int width) {
     return result;
 }
 
-decode::CompressedIFrame readIFrame(InputBitStream& inputBitStream, u32 height, u32 width) {
-    // Read in the quantized coefficients for the Y plane
-    auto luminanceBlockCount = numBlocksToRead(height, width);
-    auto yBlocks = readEncodedBlocks(luminanceBlockCount, inputBitStream);
+decode::MacroblockHeader readMacroblockHeader(InputBitStream& inputBitStream) {
+    bool predicted = inputBitStream.read_bit() == 1;
+    if (predicted) {
+        // Read the motion vector components' variable bit encodings
+        int motionVecX = (int) delta::decodeFromBitStream(inputBitStream);
+        int motionVecY = (int) delta::decodeFromBitStream(inputBitStream);
+        return {true, motionVecX, motionVecY};
+    }
+    else {
+        return {false, 0, 0};
+    }
+}
 
-    // Read in the quantized coefficients for the Cb and Cr planes
-    auto colourBlockCount = numBlocksToRead(height/2, width/2);
-    auto cbBlocks = readEncodedBlocks(colourBlockCount, inputBitStream);
-    auto crBlocks = readEncodedBlocks(colourBlockCount, inputBitStream);
+std::vector<decode::MacroblockHeader> readMacroblockHeaders(InputBitStream& inputBitStream, u32 imageHeight, u32 imageWidth) {
+    // There is one macroblock for each block in the CB/CR planes.
+    u32 macroblockCount = numBlocksToRead(imageHeight/2, imageWidth/2);
+    std::vector<decode::MacroblockHeader> headers(macroblockCount);
+    for (u32 i = 0; i < macroblockCount; ++i) {
+        headers.at(i) = readMacroblockHeader(inputBitStream);
+    }
+    return headers;
+}
+
+std::vector<dct::encoded_block_t> readPlane(InputBitStream& inputBitStream, u32 height, u32 width) {
+    auto blockCount = numBlocksToRead(height, width);
+    return readEncodedBlocks(blockCount, inputBitStream);
+}
+
+decode::CompressedIFrame readIFrame(InputBitStream& inputBitStream, u32 height, u32 width) {
+    // Read in the quantized coefficients for each plane
+    auto yBlocks = readPlane(inputBitStream, height, width);
+    auto cbBlocks = readPlane(inputBitStream, height/2, width/2);
+    auto crBlocks = readPlane(inputBitStream, height/2, width/2);
 
     // Package up and return the result
     return decode::CompressedIFrame(height, width, yBlocks, cbBlocks, crBlocks);
 }
 
-int main(int argc, char** argv) {
-    InputBitStream input_stream {std::cin};
+decode::CompressedPFrame readPFrame(InputBitStream& inputBitStream, u32 height, u32 width) {
+    // Read the macroblock headers.
+    auto macroblockHeaders = readMacroblockHeaders(inputBitStream, height, width);
 
+    // Read in the quantized coefficients for each plane
+    auto yBlocks = readPlane(inputBitStream, height, width);
+    auto cbBlocks = readPlane(inputBitStream, height/2, width/2);
+    auto crBlocks = readPlane(inputBitStream, height/2, width/2);
+
+    // Package up and return the result
+    return decode::CompressedPFrame(height, width, yBlocks, cbBlocks, crBlocks, macroblockHeaders);
+}
+
+void decompress(InputBitStream& inputBitStream) {
     // Read header fields
-    u32 height {input_stream.read_u32()};
-    u32 width {input_stream.read_u32()};
-    auto qualityLevel = getQualityLevel(input_stream);
+    u32 height {inputBitStream.read_u32()};
+    u32 width {inputBitStream.read_u32()};
+    auto qualityLevel = getQualityLevel(inputBitStream);
 
     YUVStreamWriter writer {std::cout, width, height};
 
-    // Read each frame, decode it, and write it out
-    while (input_stream.read_byte()){ // Check the single-byte continuation flag
-        auto iFrame = readIFrame(input_stream, height, width);
-        auto& resultFrame = writer.frame();
-        decode::IFrameToYCbCr(iFrame, resultFrame, qualityLevel);
+    // Read the first frame as an I-Frame and output it.
+    assert(inputBitStream.read_byte() == 1); // There must be at least one frame of video.
+    auto firstFrame = readIFrame(inputBitStream, height, width);
+    decode::IFrameToYCbCr(firstFrame, writer.frame(), qualityLevel);
+    writer.write_frame();
 
+    // The writer's active frame serves as both the previous frame and as a container
+    // to store the next frame. We need to copy it to prevent issues of overwriting
+    // part of the frame that is later used in a prediction via a motion vector.
+    auto previous = writer.frame();
+
+    // Read each subsequent P-Frame, decode it, and write it out
+    while (inputBitStream.read_byte()){ // Check the single-byte continuation flag
+        auto& activeFrame = writer.frame();
+        auto pFrame = readPFrame(inputBitStream, height, width);
+        decode::PFrameToYCbCr(pFrame, previous, activeFrame, qualityLevel);
+
+        previous = writer.frame(); // Copy the decoded frame
         writer.write_frame();
     }
+}
+
+int main() {
+    // todo remove debugging stuff
+//    auto filepath = "/home/jamie/csc485/CSC485B-Data-Compression/uvid/flower-decoded.uvi";
+//    std::fstream inFile(filepath);
+//    InputBitStream inStream(inFile);
+
+    InputBitStream inStream(std::cin);
+
+    decompress(inStream);
 
     return 0;
 }
