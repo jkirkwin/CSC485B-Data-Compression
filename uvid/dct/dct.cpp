@@ -199,7 +199,7 @@ namespace dct {
         return resultMatrix;
     }
 
-    raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t& quantizer, QualityLevel quality) {
+    matrix::Matrix<float> decodeBlockWithoutRounding(const encoded_block_t& block, const quantize::quantizer_t& quantizer, QualityLevel quality) {
         assert (block.size() == BLOCK_CAPACITY); // todo should really just use std::array<64>
 
         // undo JPEG's zig-zag permutation
@@ -221,7 +221,11 @@ namespace dct {
         auto intermediate = matrix::multiply(cMatrixTranspose, dctEncoded);
         auto dctDecoded = matrix::multiply(intermediate, cMatrix);
 
-        // convert back to bytes from real values
+        return dctDecoded;
+    }
+
+    raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t& quantizer, QualityLevel quality) {
+        auto dctDecoded = decodeBlockWithoutRounding(block, quantizer, quality);
         return getRawBlockFromFloat(dctDecoded);
     }
 

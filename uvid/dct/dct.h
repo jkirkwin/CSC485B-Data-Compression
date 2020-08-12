@@ -111,6 +111,12 @@ namespace dct {
      * Decodes the given block into a matrix representation.
      */
     raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t&, QualityLevel);
+
+    /**
+     * Decodes the block without rounding the floating point results to fit inside a byte.
+     */
+    matrix::Matrix<float> decodeBlockWithoutRounding(const encoded_block_t& block, const quantize::quantizer_t& quantizer, QualityLevel quality);
+
 }
 
 #endif
