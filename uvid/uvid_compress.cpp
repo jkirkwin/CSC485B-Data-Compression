@@ -108,29 +108,20 @@ void pushIFrame(OutputBitStream& outputBitStream, decode::CompressedIFrame& iFra
 decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previousFrame, dct::QualityLevel qualityLevel) {
     auto height = inputFrame.getYPlane().rows;
     auto width = inputFrame.getYPlane().cols;
-    auto scaledHeight = inputFrame.getCbPlane().rows;
-    auto scaledWidth = inputFrame.getCbPlane().cols;
+//    auto scaledHeight = inputFrame.getCbPlane().rows;
+//    auto scaledWidth = inputFrame.getCbPlane().cols;
 
     auto y = inputFrame.getYPlane();
     auto cb = inputFrame.getCbPlane();
     auto cr = inputFrame.getCrPlane();
 
-    // todo add back the diff-ing once macroblocks/motion vectors are added to the bitstream.
-//    matrix::Matrix<unsigned char> y(height, width);
-//    matrix::Matrix<unsigned char> cb(scaledHeight, scaledWidth);
-//    matrix::Matrix<unsigned char> cr(scaledHeight, scaledWidth);
-//    for (u32 row = 0; row < height; ++row) {
-//        for (u32 col = 0; col < width; ++col) {
-//            y.set(row, col) = inputFrame.Y(col, row) - previousFrame.Y(col, row);
-//            y.set(row, col) = inputFrame.Y(col, row) - previousFrame.Y(col, row);
-//        }
-//    }
-//    for (u32 row = 0; row < scaledHeight; ++row) {
-//        for (u32 col = 0; col < scaledWidth; ++col) {
-//            cb.set(row, col) = inputFrame.Cb(col, row) - previousFrame.Cb(col, row);
-//            cr.set(row, col) = inputFrame.Cr(col, row) - previousFrame.Cr(col, row);
-//        }
-//    }
+    // todo For right now, we do a simplified diff of only the Y-Plane.
+    //      Do diffs for Cb and Cr once the overflow issue is dealt with.
+    for (u32 row = 0; row < y.rows; ++row) {
+        for (u32 col = 0; col < y.cols; ++col){
+            y.set(row, col) = y.at(row, col) - previousFrame.Y(col, row);
+        }
+    }
 
     auto encodedYPlane = dct::transform(y, dct::quantize::luminance(), qualityLevel);
     auto encodedCbPlane = dct::transform(cb, dct::quantize::chromanance(), qualityLevel);
@@ -171,6 +162,22 @@ void pushPFrame(OutputBitStream& outputBitStream, decode::CompressedPFrame& pFra
     writeBlocks(pFrame.cr, outputBitStream);
 }
 
+// todo used for debugging only
+void inspectDecodedFrame(YUVFrame420& decodedFrame, YUVFrame420& originalFrame) {
+    auto decodedYPlane = decodedFrame.getYPlane();
+    auto originalYPlane = originalFrame.getYPlane();
+    for (u32 row = 0; row < decodedYPlane.rows; ++row) {
+        for (u32 col = 0; col < decodedYPlane.cols; ++col){
+            int decodedY = (int)(unsigned int)decodedYPlane.at(row, col);
+            int originalY = (int)(unsigned int)originalYPlane.at(row, col);
+            int diff = std::abs(decodedY - originalY);
+            if (diff > 100) {
+                std::cerr << "Large difference between decoded and actual Y component of pixel ["
+                          << col << ", " << row << "]" << std::endl;
+            }
+        }
+    }
+}
 
 void compress(u32 width, u32 height, dct::QualityLevel qualityLevel, YUVStreamReader& reader, OutputBitStream& outputBitStream){
     // Push metadata
@@ -202,6 +209,7 @@ void compress(u32 width, u32 height, dct::QualityLevel qualityLevel, YUVStreamRe
 
         // Cache the decoded version of the last frame for future P-Frames
         auto decoded = decode::PFrameToYCbCr(pFrame, previous, qualityLevel);
+//        inspectDecodedFrame(decoded, nextFrame);
         previous = decoded;
     }
 
@@ -209,7 +217,7 @@ void compress(u32 width, u32 height, dct::QualityLevel qualityLevel, YUVStreamRe
     outputBitStream.flush_to_byte();
 }
 
-//int NOT_MAIN(int argc, char** argv) {
+//int NOT_MAIN(int argc, char** argv) { // todo remove this comment
 int main(int argc, char** argv) {
     // Read arguments
     if (argc < 4){
@@ -229,6 +237,7 @@ int main(int argc, char** argv) {
 }
 
 
+// todo remove
 // A dummy main() for debugging
 //int main(int argc, char** argv) {
 int dummy(int argc, char** argv) {
@@ -238,8 +247,8 @@ int dummy(int argc, char** argv) {
     auto filepath = "/home/jamie/csc485/CSC485B-Data-Compression/uvid/raw_videos/flower_352x288.raw";
     std::fstream infile(filepath);
 
-    YUVStreamReader reader {infile, width, height};
-    OutputBitStream outputBitStream {std::cout};
+    YUVStreamReader reader{infile, width, height};
+    OutputBitStream outputBitStream{std::cout};
 
     compress(width, height, qualityLevel, reader, outputBitStream);
 

@@ -63,7 +63,9 @@ namespace decode {
 
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
-                decodedFrame.Y(x, y) = yPlane.at(y, x);
+//                decodedFrame.Y(x, y) = yPlane.at(y, x);
+                // todo testing issue by encoding only y blocks with diffs.
+                decodedFrame.Y(x, y) = yPlane.at(y, x) + previousFrame.Y(x, y);
             }
         }
         for (u32 y = 0; y < height/2; y++) {
