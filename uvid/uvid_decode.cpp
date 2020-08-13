@@ -16,6 +16,18 @@ namespace decode {
         return {yPlane, cbPlane, crPlane};
     }
 
+    unsigned char clampToByte(int i) {
+        if (i < 0) {
+            return 0;
+        }
+        else if (i > 255) {
+            return 255;
+        }
+        else {
+            return (unsigned char) i;
+        }
+    }
+
     YUVFrame420 IFrameToYCbCr(const CompressedIFrame &iFrame, dct::QualityLevel qualityLevel) {
         YUVFrame420 decodedFrame(iFrame.width, iFrame.height);
         IFrameToYCbCr(iFrame, decodedFrame, qualityLevel);
@@ -34,13 +46,13 @@ namespace decode {
 
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
-                decodedFrame.Y(x, y) = yPlane.at(y, x);
+                decodedFrame.Y(x, y) = clampToByte(yPlane.at(y, x));
             }
         }
         for (u32 y = 0; y < scaledHeight; y++) {
             for (u32 x = 0; x < scaledWidth; x++) {
-                decodedFrame.Cb(x, y) = cbPlane.at(y, x);
-                decodedFrame.Cr(x, y) = crPlane.at(y, x);
+                decodedFrame.Cb(x, y) = clampToByte(cbPlane.at(y, x));
+                decodedFrame.Cr(x, y) = clampToByte(crPlane.at(y, x));
             }
         }
     }
@@ -63,15 +75,17 @@ namespace decode {
 
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
-//                decodedFrame.Y(x, y) = yPlane.at(y, x);
                 // todo testing issue by encoding only y blocks with diffs.
-                decodedFrame.Y(x, y) = yPlane.at(y, x) + previousFrame.Y(x, y);
+                int encoded = yPlane.at(y, x);
+                int previous = previousFrame.Y(x, y);
+                int actual = encoded + previous;
+                decodedFrame.Y(x, y) = clampToByte(actual);
             }
         }
         for (u32 y = 0; y < height/2; y++) {
             for (u32 x = 0; x < width/2; x++) {
-                decodedFrame.Cb(x, y) = cbPlane.at(y, x);
-                decodedFrame.Cr(x, y) = crPlane.at(y, x);
+                decodedFrame.Cb(x, y) = clampToByte(cbPlane.at(y, x));
+                decodedFrame.Cr(x, y) = clampToByte(crPlane.at(y, x));
             }
         }
     }

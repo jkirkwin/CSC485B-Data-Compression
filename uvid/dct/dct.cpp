@@ -28,27 +28,17 @@ namespace dct {
     }
 
     /*
-     * Convert a float block to one that uses a byte representation.
+     * Convert a float block to one that uses an int representation.
      */
     raw_block_t getRawBlockFromFloat(const matrix::Matrix<float>& block) {
         // https://stackoverflow.com/questions/6399090/c-convert-vectorint-to-vectordouble
 
-        // todo this may be causing issues with P-Frames.
-        std::vector<unsigned char> byteData;
+        std::vector<int> intData;
         for (auto f : block.data) {
-            // ensure that we don't wrap around on out-of-range values
-            if ( f <= 0) {
-                byteData.push_back(0);
-            }
-            else if (f > 255) {
-                byteData.push_back(255);
-            }
-            else {
-                byteData.push_back(std::round(f));
-            }
+                intData.push_back(std::round(f));
         }
 
-        return raw_block_t(block.rows, block.cols, byteData);
+        return raw_block_t(block.rows, block.cols, intData);
     }
 
     float getMultiplier(QualityLevel q) {
@@ -80,9 +70,9 @@ namespace dct {
         quantized.reserve(BLOCK_CAPACITY);
         for (int row = 0; row < BLOCK_DIMENSION; ++row) {
             for (int col = 0; col < BLOCK_DIMENSION; ++col) {
-                auto dctElem = dctResult.at(row, col);
-                auto quantElem = (float) quantizer.at(row, col);
-                auto scaledQuantElem = scaleQuantizerCoefficient(quantElem, qualityLevel, row, col);
+                float dctElem = dctResult.at(row, col);
+                float quantElem = (float) quantizer.at(row, col);
+                float scaledQuantElem = scaleQuantizerCoefficient(quantElem, qualityLevel, row, col);
                 quantized.push_back(std::round(dctElem / scaledQuantElem));
             }
         }
@@ -100,6 +90,7 @@ namespace dct {
             21, 34, 37, 47, 50, 56, 59, 61,
             35, 36, 48, 49, 57, 58, 62, 63
     };
+
     encoded_block_t permuteBlock(const encoded_block_t& original) {
         encoded_block_t permuted(original.size());
         for (int i = 0; i < BLOCK_CAPACITY; ++i) {
@@ -130,13 +121,13 @@ namespace dct {
     }
 
     std::vector<encoded_block_t> transform(
-            const matrix::Matrix<unsigned char>& inputMatrix,
+            const matrix::Matrix<int>& inputMatrix,
             const quantize::quantizer_t& quantizer,
             QualityLevel quality) {
         assert (inputMatrix.rows > 0 && inputMatrix.cols > 0);
 
         std::vector<encoded_block_t> result;
-        result.reserve(inputMatrix.capacity() / (BLOCK_CAPACITY-1)); // This should hopefully prevent resizing
+        result.reserve(inputMatrix.capacity() / (BLOCK_CAPACITY-1)); // This should prevent resizing
 
         for (int row = 0; row < inputMatrix.rows; row += BLOCK_DIMENSION) {
             for (int col = 0; col < inputMatrix.cols; col += BLOCK_DIMENSION) {
@@ -163,12 +154,12 @@ namespace dct {
         return result;
     }
 
-    matrix::Matrix<unsigned char> invert(const std::vector<encoded_block_t>& blocks, const inversionContext& context, QualityLevel quality) {
+    matrix::Matrix<int> invert(const std::vector<encoded_block_t>& blocks, const inversionContext& context, QualityLevel quality) {
         //https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
         auto blocksPerRow = context.width / BLOCK_DIMENSION + (context.width % BLOCK_DIMENSION != 0);
 
         // create and populate a result matrix
-        matrix::Matrix<unsigned char> resultMatrix(context.height, context.width);
+        matrix::Matrix<int> resultMatrix(context.height, context.width);
         for (int row = 0; row < resultMatrix.rows; row += BLOCK_DIMENSION) {
             for (int col = 0; col < resultMatrix.cols; col += BLOCK_DIMENSION) {
                 // (row, col) is the position of the top left coefficient in the next block of the matrix.
@@ -199,7 +190,7 @@ namespace dct {
         return resultMatrix;
     }
 
-    matrix::Matrix<float> decodeBlockWithoutRounding(const encoded_block_t& block, const quantize::quantizer_t& quantizer, QualityLevel quality) {
+    raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t& quantizer, QualityLevel quality) {
         assert (block.size() == BLOCK_CAPACITY); // todo should really just use std::array<64>
 
         // undo JPEG's zig-zag permutation
@@ -221,11 +212,6 @@ namespace dct {
         auto intermediate = matrix::multiply(cMatrixTranspose, dctEncoded);
         auto dctDecoded = matrix::multiply(intermediate, cMatrix);
 
-        return dctDecoded;
-    }
-
-    raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t& quantizer, QualityLevel quality) {
-        auto dctDecoded = decodeBlockWithoutRounding(block, quantizer, quality);
         return getRawBlockFromFloat(dctDecoded);
     }
 

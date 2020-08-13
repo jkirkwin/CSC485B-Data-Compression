@@ -86,9 +86,9 @@ void writeBlocks(const std::vector<dct::encoded_block_t>& blocks, OutputBitStrea
 }
 
 decode::CompressedIFrame getIFrame(YUVFrame420& inputFrame, dct::QualityLevel qualityLevel) {
-    auto yPlane = inputFrame.getYPlane();
-    auto cbPlane = inputFrame.getCbPlane();
-    auto crPlane = inputFrame.getCrPlane();
+    auto yPlane = inputFrame.getIntPlaneY();
+    auto cbPlane = inputFrame.getIntPlaneCb();
+    auto crPlane = inputFrame.getIntPlaneCr();
 
     auto encodedYPlane = dct::transform(yPlane, dct::quantize::luminance(), qualityLevel);
     auto encodedCbPlane = dct::transform(cbPlane, dct::quantize::chromanance(), qualityLevel);
@@ -106,20 +106,23 @@ void pushIFrame(OutputBitStream& outputBitStream, decode::CompressedIFrame& iFra
 }
 
 decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previousFrame, dct::QualityLevel qualityLevel) {
-    auto height = inputFrame.getYPlane().rows;
-    auto width = inputFrame.getYPlane().cols;
+    auto height = inputFrame.getIntPlaneY().rows;
+    auto width = inputFrame.getIntPlaneY().cols;
 //    auto scaledHeight = inputFrame.getCbPlane().rows;
 //    auto scaledWidth = inputFrame.getCbPlane().cols;
 
-    auto y = inputFrame.getYPlane();
-    auto cb = inputFrame.getCbPlane();
-    auto cr = inputFrame.getCrPlane();
+    auto y = inputFrame.getIntPlaneY();
+    auto cb = inputFrame.getIntPlaneCb();
+    auto cr = inputFrame.getIntPlaneCr();
 
     // todo For right now, we do a simplified diff of only the Y-Plane.
     //      Do diffs for Cb and Cr once the overflow issue is dealt with.
     for (u32 row = 0; row < y.rows; ++row) {
         for (u32 col = 0; col < y.cols; ++col){
-            y.set(row, col) = y.at(row, col) - previousFrame.Y(col, row);
+            int actual = y.at(row, col);
+            int previous = (int) (u32) previousFrame.Y(col, row);
+            int diff = actual - previous;
+            y.set(row, col) = diff;
         }
     }
 
@@ -162,23 +165,6 @@ void pushPFrame(OutputBitStream& outputBitStream, decode::CompressedPFrame& pFra
     writeBlocks(pFrame.cr, outputBitStream);
 }
 
-// todo used for debugging only
-void inspectDecodedFrame(YUVFrame420& decodedFrame, YUVFrame420& originalFrame) {
-    auto decodedYPlane = decodedFrame.getYPlane();
-    auto originalYPlane = originalFrame.getYPlane();
-    for (u32 row = 0; row < decodedYPlane.rows; ++row) {
-        for (u32 col = 0; col < decodedYPlane.cols; ++col){
-            int decodedY = (int)(unsigned int)decodedYPlane.at(row, col);
-            int originalY = (int)(unsigned int)originalYPlane.at(row, col);
-            int diff = std::abs(decodedY - originalY);
-            if (diff > 100) {
-                std::cerr << "Large difference between decoded and actual Y component of pixel ["
-                          << col << ", " << row << "]" << std::endl;
-            }
-        }
-    }
-}
-
 void compress(u32 width, u32 height, dct::QualityLevel qualityLevel, YUVStreamReader& reader, OutputBitStream& outputBitStream){
     // Push metadata
     outputBitStream.push_u32(height);
@@ -209,7 +195,6 @@ void compress(u32 width, u32 height, dct::QualityLevel qualityLevel, YUVStreamRe
 
         // Cache the decoded version of the last frame for future P-Frames
         auto decoded = decode::PFrameToYCbCr(pFrame, previous, qualityLevel);
-//        inspectDecodedFrame(decoded, nextFrame);
         previous = decoded;
     }
 

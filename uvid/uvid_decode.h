@@ -9,7 +9,7 @@
 namespace decode {
 
     typedef std::vector<dct::encoded_block_t> encoded_plane_t;
-    typedef matrix::Matrix<unsigned char> decoded_plane_t;
+    typedef matrix::Matrix<int> decoded_plane_t;
 
     struct CompressedIFrame {
         u32 height, width;
@@ -45,14 +45,6 @@ namespace decode {
      * top left corner and the top left corner of the predictive block in the
      * previous frame.
      */
-    struct MacroBlock { // todo use or remove. If remove, keep bulk of the documentation.
-        std::pair<u32, u32> topLeftCoords;
-        bool isPredicted;
-        std::pair<u32, u32> motionVector;
-        matrix::Matrix<dct::encoded_block_t> yBlocks;
-        dct::encoded_block_t cbBlock, crBlock;
-    };
-
     struct MacroblockHeader {
         bool predicted;
         int motionVectorX, motionVectorY;

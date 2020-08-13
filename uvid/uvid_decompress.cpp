@@ -149,7 +149,7 @@ void decompress(InputBitStream& inputBitStream) {
 
     // The writer's active frame serves as both the previous frame and as a container
     // to store the next frame. We need to copy it to prevent issues of overwriting
-    // part of the frame that is later used in a prediction via a motion vector.
+    // parts of the frame that are later used in a prediction via a motion vector.
     auto previous = writer.frame();
 
     // Read each subsequent P-Frame, decode it, and write it out

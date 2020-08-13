@@ -57,16 +57,18 @@ public:
         return Cr_data.at(y*width/chroma_ratio_x + x);
     }
 
-    // todo remove the getPlane methods and use a matrix internally instead.
-    typedef matrix::Matrix<unsigned char> plane_t;
-    plane_t getYPlane() {
-        return plane_t(height, width, Y_data);
+    typedef matrix::Matrix<int> int_plane_t;
+    int_plane_t getIntPlaneY() {
+        std::vector<int> intData(Y_data.begin(), Y_data.end());
+        return int_plane_t(height, width, intData);
     }
-    plane_t getCbPlane() {
-        return plane_t(height/chroma_ratio_y, width/chroma_ratio_x, Cb_data);
+    int_plane_t getIntPlaneCb() {
+        std::vector<int> intData(Cb_data.begin(), Cb_data.end());
+        return int_plane_t(height/chroma_ratio_y, width/chroma_ratio_x, intData);
     }
-    plane_t getCrPlane() {
-        return plane_t(height/chroma_ratio_y, width/chroma_ratio_x, Cr_data);
+    int_plane_t getIntPlaneCr() {
+        std::vector<int> intData(Cr_data.begin(), Cr_data.end());
+        return int_plane_t(height/chroma_ratio_y, width/chroma_ratio_x, intData);
     }
 
 private:

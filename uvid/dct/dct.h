@@ -27,7 +27,7 @@ namespace dct {
     const unsigned int BLOCK_DIMENSION = 8;
     const unsigned int BLOCK_CAPACITY = 64;
 
-    typedef matrix::Matrix<unsigned char> raw_block_t; // Must be 8x8
+    typedef matrix::Matrix<int> raw_block_t; // Must be 8x8
     typedef std::vector<int> encoded_block_t; // must be length 64 todo make this an int array instead
     // todo can this be a short?
 
@@ -73,7 +73,7 @@ namespace dct {
      * The first element of each block is the DC coefficient, which is followed
      * by the AC coefficients in order of proximity to the DC coefficient.
      */
-    std::vector<encoded_block_t> transform(const matrix::Matrix<unsigned char>&, const quantize::quantizer_t&, QualityLevel);
+    std::vector<encoded_block_t> transform(const matrix::Matrix<int>&, const quantize::quantizer_t&, QualityLevel);
 
     /**
      * Encode a single block.
@@ -103,20 +103,14 @@ namespace dct {
      * Inverts the DCT transform given the set of encoded blocks.
      *
      * @return The decompressed matrix. Note: This is unlikely to be identical
-     * to the original input. This DCT is a lossy process.
+     * to the original input. This codec is lossy due to the quantization.
      */
-    matrix::Matrix<unsigned char> invert(const std::vector<encoded_block_t>& blocks, const inversionContext&, QualityLevel);
+    matrix::Matrix<int> invert(const std::vector<encoded_block_t>& blocks, const inversionContext&, QualityLevel);
 
     /**
      * Decodes the given block into a matrix representation.
      */
     raw_block_t decodeBlock(const encoded_block_t& block, const quantize::quantizer_t&, QualityLevel);
-
-    /**
-     * Decodes the block without rounding the floating point results to fit inside a byte.
-     */
-    matrix::Matrix<float> decodeBlockWithoutRounding(const encoded_block_t& block, const quantize::quantizer_t& quantizer, QualityLevel quality);
-
 }
 
 #endif
