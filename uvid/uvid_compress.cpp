@@ -108,21 +108,30 @@ void pushIFrame(OutputBitStream& outputBitStream, decode::CompressedIFrame& iFra
 decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previousFrame, dct::QualityLevel qualityLevel) {
     auto height = inputFrame.getIntPlaneY().rows;
     auto width = inputFrame.getIntPlaneY().cols;
-//    auto scaledHeight = inputFrame.getCbPlane().rows;
-//    auto scaledWidth = inputFrame.getCbPlane().cols;
+    auto scaledHeight = height/2;
+    auto scaledWidth = width/2;
 
+    // Get the data from each plane in the frame.
     auto y = inputFrame.getIntPlaneY();
     auto cb = inputFrame.getIntPlaneCb();
     auto cr = inputFrame.getIntPlaneCr();
 
-    // todo For right now, we do a simplified diff of only the Y-Plane.
-    //      Do diffs for Cb and Cr once the overflow issue is dealt with.
+    // todo search for a motion vector
+
+    // Take the difference between this frame and the previous one.
     for (u32 row = 0; row < y.rows; ++row) {
         for (u32 col = 0; col < y.cols; ++col){
-            int actual = y.at(row, col);
-            int previous = (int) (u32) previousFrame.Y(col, row);
-            int diff = actual - previous;
+            int diff = y.at(row, col) - (int) (u32) previousFrame.Y(col, row);
             y.set(row, col) = diff;
+        }
+    }
+    for (u32 row = 0; row < scaledHeight; ++row) {
+        for (u32 col = 0; col < scaledWidth; ++col){
+            int cbDiff = cb.at(row, col) - (int) (u32) previousFrame.Cb(col, row);
+            cb.set(row, col) = cbDiff;
+
+            int crDiff = cr.at(row, col) - (int) (u32) previousFrame.Cr(col, row);
+            cr.set(row, col) = crDiff;
         }
     }
 
@@ -130,8 +139,8 @@ decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previou
     auto encodedCbPlane = dct::transform(cb, dct::quantize::chromanance(), qualityLevel);
     auto encodedCrPlane = dct::transform(cr, dct::quantize::chromanance(), qualityLevel);
 
-    // We aren't doing any diff-ing, so we generate un-predicted macroblock headers
-    decode::MacroblockHeader unpredictedHeader {false, 0, 0};
+    // We aren't doing any clever searching yet, so we generate very simple macroblock headers
+    decode::MacroblockHeader unpredictedHeader {true, 0, 0};
     std::vector<decode::MacroblockHeader> macroblockHeaders(encodedCbPlane.size(), unpredictedHeader);
 
     return decode::CompressedPFrame(height, width, encodedYPlane, encodedCbPlane, encodedCrPlane, macroblockHeaders);

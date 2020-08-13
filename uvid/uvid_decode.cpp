@@ -70,22 +70,26 @@ namespace decode {
         assert (pFrame.cb.size() == pFrame.macroblockHeaders.size());
         for (u32 i = 0; i < pFrame.macroblockHeaders.size(); ++i) {
             auto header = pFrame.macroblockHeaders.at(i);
-            assert (!header.predicted); // todo implement decoding of predicted macroblocks.
+
+            // todo decode general macroblocks
+            assert (header.predicted);
+            assert (header.motionVectorX == 0);
+            assert (header.motionVectorY == 0);
         }
 
+        // Undo the global diff
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
-                // todo testing issue by encoding only y blocks with diffs.
-                int encoded = yPlane.at(y, x);
-                int previous = previousFrame.Y(x, y);
-                int actual = encoded + previous;
+                int actual = yPlane.at(y, x) + (int)previousFrame.Y(x, y);
                 decodedFrame.Y(x, y) = clampToByte(actual);
             }
         }
         for (u32 y = 0; y < height/2; y++) {
             for (u32 x = 0; x < width/2; x++) {
-                decodedFrame.Cb(x, y) = clampToByte(cbPlane.at(y, x));
-                decodedFrame.Cr(x, y) = clampToByte(crPlane.at(y, x));
+                int cbActual = cbPlane.at(y, x) + (int)previousFrame.Cb(x, y);
+                int crActual = crPlane.at(y, x) + (int)previousFrame.Cr(x, y);
+                decodedFrame.Cb(x, y) = clampToByte(cbActual);
+                decodedFrame.Cr(x, y) = clampToByte(crActual);
             }
         }
     }
