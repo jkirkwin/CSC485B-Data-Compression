@@ -116,7 +116,20 @@ decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previou
     auto cb = inputFrame.getIntPlaneCb();
     auto cr = inputFrame.getIntPlaneCr();
 
-    // todo search for a motion vector
+    // todo
+    //  - Implement a function to determine if a given macroblock gives a good match
+    //      - Look in the slides for metrics to use.
+    //      - Remember that the motion vector is measured in the colour planes, not the Y plane.
+    //      - Consider randomly choosing which subsets of the blocks to compare to save time.
+    //              - If we compare a small subset of cb, cr, and y chunks and get a good result
+    //                that should give us high confidence.
+    //  - search locally for a useable motion vector
+    //      - Can either search all blocks in some area and pick the best one, or choose
+    //        the first acceptable one.
+    //  - search elsewhere
+    //      - Only implement this if you have time
+    //      - Only resort to this if we can't find a "good" match nearby.
+    //      - Consider a random fade-away
 
     // Take the difference between this frame and the previous one.
     for (u32 row = 0; row < y.rows; ++row) {
@@ -223,6 +236,8 @@ int main(int argc, char** argv) {
     OutputBitStream outputBitStream {std::cout};
 
     compress(width, height, qualityLevel, reader, outputBitStream);
+
+    srand(time(NULL)); // todo remove this unless needed.
 
     return 0;
 }
