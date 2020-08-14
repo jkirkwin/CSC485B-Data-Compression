@@ -58,8 +58,11 @@ namespace decode {
     }
 
     void setPredictedYBlock(const MacroblockHeader &header, YUVFrame420 &previousFrame, YUVFrame420 &decodedFrame, u32 row, u32 col, decoded_plane_t& yPlane) {
-        int colOffset = header.motionVectorX;
-        int rowOffset = header.motionVectorY;
+
+        // todo confirm that we can just multiply by 2 here.
+        // To keep these values smaller, they are encoded in the sub-sampled colour planes' coordinates.
+        int colOffset = header.motionVectorX * 2;
+        int rowOffset = header.motionVectorY * 2;
 
         u32 maxRow = std::min(yPlane.rows, row + 16);
         u32 maxCol = std::min(yPlane.cols, col + 16);
@@ -87,10 +90,7 @@ namespace decode {
         auto scaledRow = row/2;
         auto scaledCol = col/2;
 
-        // todo how will this work? These offsets must be adjusted too. Can we just divide by 2? I don't think so.
-        assert (header.predicted);
-        assert (header.motionVectorX == 0);
-        assert (header.motionVectorY == 0);
+        // To keep these values smaller, they are encoded in the sub-sampled colour planes' coordinates.
         int colOffset = header.motionVectorX;
         int rowOffset = header.motionVectorY;
 
