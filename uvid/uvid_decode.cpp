@@ -57,6 +57,75 @@ namespace decode {
         }
     }
 
+    void setPredictedYBlock(const MacroblockHeader &header, YUVFrame420 &previousFrame, YUVFrame420 &decodedFrame, u32 row, u32 col, decoded_plane_t& yPlane) {
+        int colOffset = header.motionVectorX;
+        int rowOffset = header.motionVectorY;
+
+        u32 maxRow = std::min(yPlane.rows, row + 16);
+        u32 maxCol = std::min(yPlane.cols, col + 16);
+
+        for (u32 rowIndex = row; rowIndex < maxRow; ++rowIndex) {
+            for (u32 colIndex = col; colIndex < maxCol; ++colIndex) {
+                int encoded = yPlane.at(rowIndex, colIndex);
+                if (header.predicted) {
+                    // Undo the diff that was taken during compression.
+                    auto prevRowIndex = rowIndex + rowOffset;
+                    auto prevColIndex = colIndex + colOffset;
+                    int prev = previousFrame.Y(prevColIndex, prevRowIndex);
+                    int actual = encoded + prev;
+                    decodedFrame.Y(colIndex, rowIndex) = clampToByte(actual);
+                }
+                else {
+                    // The encoded value is a literal - no diff was taken.
+                    decodedFrame.Y(colIndex, rowIndex) = clampToByte(encoded);
+                }
+            }
+        }
+    }
+
+    void setPredictedColourBlocks(const MacroblockHeader &header, YUVFrame420 &previousFrame, YUVFrame420 &decodedFrame, u32 row, u32 col, decoded_plane_t& cbPlane, decoded_plane_t& crPlane)  {
+        auto scaledRow = row/2;
+        auto scaledCol = col/2;
+
+        // todo how will this work? These offsets must be adjusted too. Can we just divide by 2? I don't think so.
+        assert (header.predicted);
+        assert (header.motionVectorX == 0);
+        assert (header.motionVectorY == 0);
+        int colOffset = header.motionVectorX;
+        int rowOffset = header.motionVectorY;
+
+        u32 maxRow = std::min(cbPlane.rows, scaledRow + 8);
+        u32 maxCol = std::min(cbPlane.cols, scaledCol + 8);
+        for (u32 rowIndex = scaledRow; rowIndex < maxRow; ++rowIndex) {
+            for (u32 colIndex = scaledCol; colIndex < maxCol; ++colIndex) {
+                int encodedCb = cbPlane.at(rowIndex, colIndex);
+                int encodedCr = crPlane.at(rowIndex, colIndex);
+
+                if (header.predicted) {
+                    // Undo the diff that was taken during compression.
+                    auto prevRowIndex = rowIndex + rowOffset;
+                    auto prevColIndex = colIndex + colOffset;
+
+                    // Undo Cb diff
+                    int prevCb = previousFrame.Cb(prevColIndex, prevRowIndex);
+                    int actualCb = encodedCb + prevCb;
+                    decodedFrame.Cb(colIndex, rowIndex) = clampToByte(actualCb);
+
+                    // Undo Cr diff
+                    int prevCr = previousFrame.Cr(prevColIndex, prevRowIndex);
+                    int actualCr = encodedCr + prevCr;
+                    decodedFrame.Cr(colIndex, rowIndex) = clampToByte(actualCr);
+                }
+                else {
+                    // The encoded value is a literal - no diff was taken.
+                    decodedFrame.Cb(colIndex, rowIndex) = clampToByte(encodedCb);
+                    decodedFrame.Cr(colIndex, rowIndex) = clampToByte(encodedCr);
+                }
+            }
+        }
+    }
+
+
     void PFrameToYCbCr(const CompressedPFrame &pFrame, YUVFrame420 &previousFrame, YUVFrame420 &decodedFrame,
                        dct::QualityLevel qualityLevel) {
         auto height = pFrame.height, width = pFrame.width;
@@ -67,29 +136,17 @@ namespace decode {
         auto cbPlane = invertedPlanes.at(1);
         auto crPlane = invertedPlanes.at(2);
 
+        // Decode each macroblock
         assert (pFrame.cb.size() == pFrame.macroblockHeaders.size());
-        for (u32 i = 0; i < pFrame.macroblockHeaders.size(); ++i) {
-            auto header = pFrame.macroblockHeaders.at(i);
+        int i = 0;
+        for (u32 row = 0; row < height; row += 16) {
+            for (u32 col = 0; col < width; col += 16) {
+                // There is one macroblock for each 16x16 chunk of the image.
+                auto macroBlockHeader = pFrame.macroblockHeaders.at(i++);
 
-            // todo decode general macroblocks
-            assert (header.predicted);
-            assert (header.motionVectorX == 0);
-            assert (header.motionVectorY == 0);
-        }
-
-        // Undo the global diff
-        for (u32 y = 0; y < height; y++) {
-            for (u32 x = 0; x < width; x++) {
-                int actual = yPlane.at(y, x) + (int)previousFrame.Y(x, y);
-                decodedFrame.Y(x, y) = clampToByte(actual);
-            }
-        }
-        for (u32 y = 0; y < height/2; y++) {
-            for (u32 x = 0; x < width/2; x++) {
-                int cbActual = cbPlane.at(y, x) + (int)previousFrame.Cb(x, y);
-                int crActual = crPlane.at(y, x) + (int)previousFrame.Cr(x, y);
-                decodedFrame.Cb(x, y) = clampToByte(cbActual);
-                decodedFrame.Cr(x, y) = clampToByte(crActual);
+                // todo clean this up so we can call a single function 3 times.
+                setPredictedYBlock(macroBlockHeader, previousFrame, decodedFrame, row, col, yPlane);
+                setPredictedColourBlocks(macroBlockHeader, previousFrame, decodedFrame, row, col, cbPlane, crPlane);
             }
         }
     }
