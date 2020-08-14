@@ -182,7 +182,7 @@ void compress(u32 width, u32 height, dct::QualityLevel qualityLevel, YUVStreamRe
 
     // Read the first frame and encode it as an I-Frame
     assert (reader.read_next_frame());
-    outputBitStream.push_byte(1); // Continuation flag
+    outputBitStream.push_bit(1); // Continuation flag
     auto iFrame = getIFrame(reader.frame(), qualityLevel);
     pushIFrame(outputBitStream, iFrame);
 
@@ -192,10 +192,8 @@ void compress(u32 width, u32 height, dct::QualityLevel qualityLevel, YUVStreamRe
 
     // Read each frame of video, encode it, and push the encoding.
     while (reader.read_next_frame()){
-        // Push a one byte flag to indicate there is another frame of video
-        // todo consider reducing the size of the continuation flag.
-        //  We could probably just use a single bit
-        outputBitStream.push_byte(1);
+        // Push a one bit flag to indicate there is another frame of video
+        outputBitStream.push_bit(1);
 
         // Read in the next frame, encode it, and push the encoding
         YUVFrame420& nextFrame = reader.frame();
@@ -207,13 +205,12 @@ void compress(u32 width, u32 height, dct::QualityLevel qualityLevel, YUVStreamRe
         previous = decoded;
     }
 
-    outputBitStream.push_byte(0); // Flag to indicate end of data
+    outputBitStream.push_bit(0); // Flag to indicate end of data
     outputBitStream.flush_to_byte();
 }
 
 //int NOT_MAIN(int argc, char** argv) { // todo remove this comment
 int main(int argc, char** argv) {
-    // Read arguments
     if (argc < 4){
         std::cerr << "Usage: " << argv[0] << " <width> <height> <low/medium/high>" << std::endl;
         return 1;

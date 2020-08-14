@@ -142,7 +142,7 @@ void decompress(InputBitStream& inputBitStream) {
     YUVStreamWriter writer {std::cout, width, height};
 
     // Read the first frame as an I-Frame and output it.
-    assert(inputBitStream.read_byte() == 1); // There must be at least one frame of video.
+    assert(inputBitStream.read_bit() == 1); // There must be at least one frame of video.
     auto firstFrame = readIFrame(inputBitStream, height, width);
     decode::IFrameToYCbCr(firstFrame, writer.frame(), qualityLevel);
     writer.write_frame();
@@ -153,7 +153,7 @@ void decompress(InputBitStream& inputBitStream) {
     auto previous = writer.frame();
 
     // Read each subsequent P-Frame, decode it, and write it out
-    while (inputBitStream.read_byte()){ // Check the single-byte continuation flag
+    while (inputBitStream.read_bit()){ // Check the single-bit continuation flag
         auto& activeFrame = writer.frame();
         auto pFrame = readPFrame(inputBitStream, height, width);
         decode::PFrameToYCbCr(pFrame, previous, activeFrame, qualityLevel);
