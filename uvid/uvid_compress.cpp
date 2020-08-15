@@ -106,29 +106,6 @@ void pushIFrame(OutputBitStream& outputBitStream, decode::CompressedIFrame& iFra
     writeBlocks(iFrame.cr, outputBitStream);
 }
 
-
-
-
-// todo currently unused. Remove if not used for local search
-u32 totalAbsoluteDifference(std::vector<int>& first, std::vector<int>& second) {
-    assert (first.size() == second.size());
-    u32 sum = 0;
-    for (int i = 0; i < first.size(); ++i) {
-        // todo if we're doing this repeatedly for each comparison,
-        //  we are probably doing it again once a good match is found.
-        //  We could optimize this by saving the results of the diff and re-using them.
-        int difference = first.at(i) - second.at(i);
-        sum += std::abs(difference);
-    }
-    return sum;
-}
-
-u32 averageAbsoluteDifference(matrix::Matrix<int>& block1, matrix::Matrix<int>& block2) {
-    // todo consider randomly omitting some comparisons
-    u32 totalDifference = totalAbsoluteDifference(block1.data, block2.data);
-    return totalDifference / block1.capacity();
-}
-
 struct Macroblock {
     u32 topLeftX, topLeftY;
     typedef matrix::Matrix<int> block_t;
@@ -139,13 +116,6 @@ struct Macroblock {
 
     }
 };
-u32 getDifferenceMeasure(Macroblock& first, Macroblock& second) {
-    // We assume that the two colour planes will either both be similar or both different
-    // and omit the calculation for the Cr plane.
-    auto cbDifference = averageAbsoluteDifference(first.cbBlock, second.cbBlock);
-    auto yDifference = averageAbsoluteDifference(first.yBlock, second.yBlock);
-    return (cbDifference + yDifference)/2;
-}
 
 Macroblock getMacroblockFromYUVFrame(YUVFrame420& previous, u32 row, u32 col, u32 height, u32 width) {
     // Row and col give the top-left coordinates of the chunk of the previous block to be used.
@@ -173,32 +143,28 @@ Macroblock getMacroblockFromYUVFrame(YUVFrame420& previous, u32 row, u32 col, u3
     return Macroblock(yBlock, cbBlock, crBlock, col, row);
 }
 
-// Returns a macroblock if a match was found
-std::optional<Macroblock> localSearch(u32 row, u32 col, Macroblock& block, YUVFrame420& previous) {
-    // Start by searching (row, col) and the surrounding 8 spots.
-    // Then try searching in a larger ring outside of that
-    //      E.g.    (row-5, col-5); (row-5, col); (row-5, col+5);
-    //              (row, col-5); (row, col+5);
-    //              (row+5, col-5); (row+5, col); (row+5, col+5);
+std::vector<std::pair<u32, u32>> getLocalSearchCoordinates(u32 row, u32 col, u32 height, u32 width) {
+    // Return each point above/below/diagonal by any of these amounts to the point given that lie inside the image.
+    std::vector<int> spreadFactors {1, 10, 20}; // todo find better factors by benchmarking
 
-    // todo tweak these by benchmarking
-    auto returnThreshold = 2; // If the difference measure is below this, then kick-out immediately as we have found a very good match
-    auto minThreshold = 10; // If the difference measure for all potential matches is above this, do not predict the block.
-
-    // If we're trying to minimize the size of the diffs, we might want to look at average size of difference vs average size of literal.
-
-    // todo actually search for a good match. Right now we're only looking at one place.
-    // First, search the same place in the previous frame.
-    auto blockHeight = block.cbBlock.rows;
-    auto blockWidth = block.cbBlock.cols;
-    auto prevBlock = getMacroblockFromYUVFrame(previous, row, col, blockHeight, blockWidth);
-    auto difference = getDifferenceMeasure(block, prevBlock);
-    if (difference < returnThreshold) {
-        return { prevBlock };
+    std::vector<std::pair<u32, u32>> results;
+    results.push_back({col, row}); // Always check the same position in the previous frame.
+    for (auto spread : spreadFactors) {
+        for (int i = -1; i < 2; ++i) {
+            for (int j = -1; j < 2; ++j) {
+                if (i != 0 || j != 0) {
+                    int x = (int)col + spread*i;
+                    int y = (int)row + spread*j;
+                    auto validX = 0 <= x && x + 8 < width;
+                    auto validY = 0 <= y && y + 8 < height;
+                    if (validX && validY) {
+                        results.push_back({x,y});
+                    }
+                }
+            }
+        }
     }
-    else {
-        return std::nullopt;
-    }
+    return results;
 }
 
 // Subtracts second from first
@@ -236,16 +202,9 @@ decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previou
     auto prevCrPlane = previousFrame.getIntPlaneCr();
 
     // todo
-    //  - Implement a function to determine if a given macroblock gives a good match
-    //      - Use either AAD or MSD to start. If there's time, try the other and compare compression results.
-    //      - Look in the slides for metrics to use.
-    //      - Remember that the motion vector is measured in the colour planes, not the Y plane.
     //      - Consider randomly choosing which subsets of the blocks to compare to save time.
     //              - If we compare a small subset of cb, cr, and y chunks and get a good result
     //                that should give us high confidence.
-    //  - search locally for a useable motion vector
-    //      - Can either search all blocks in some area and pick the best one, or choose
-    //        the first acceptable one.
     //  - search elsewhere
     //      - Only implement this if you have time
     //      - Only resort to this if we can't find a "good" match nearby.
@@ -262,29 +221,63 @@ decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previou
             auto crBlock = crPlane.getBlock(row, col, numRows, numCols);
             auto yBlock = yPlane.getBlock(row*2, col*2, numRows*2, numCols*2);
 
-            // For now, just compare against the same spot in the previous frame.
-            // todo add local search
-            auto prevCbBlock = prevCbPlane.getBlock(row, col, numRows, numCols);
-            auto prevCrBlock = prevCrPlane.getBlock(row, col, numRows, numCols);
-            auto prevYBlock = prevYPlane.getBlock(row*2, col*2, numRows*2, numCols*2);
+            // Search for the best match in a local area.
+            u32 bestX = -1, bestY = -1, bestAAD = -1;
+            std::vector<std::vector<int>> bestDiffs;
+            int returnThreshold = 5; // Return early if we get a really close match.
+            auto localSearchCoordinates = getLocalSearchCoordinates(row, col, scaledHeight, scaledWidth);
+            for (auto coord : localSearchCoordinates) {
+                auto x = coord.first;
+                auto y = coord.second;
 
-            // compute diffs
-            auto yDiffs = diff(yBlock, prevYBlock);
-            auto cbDiffs = diff(cbBlock, prevCbBlock);
-            auto crDiffs = diff(crBlock, prevCrBlock);
+                // Pull out the specified blocks of the previous image
+                auto prevCbBlock = prevCbPlane.getBlock(y, x, numRows, numCols);
+                auto prevCrBlock = prevCrPlane.getBlock(y, x, numRows, numCols);
+                auto prevYBlock = prevYPlane.getBlock(y*2, x*2, numRows*2, numCols*2);
 
-            // Determine if the diffs found are actually good
-            auto totalCount = yDiffs.capacity() + cbDiffs.capacity() + crDiffs.capacity();
-            auto totalSum = sumAbsValues(yDiffs.data) + sumAbsValues(cbDiffs.data) + sumAbsValues(crDiffs.data);
-            auto averageAbsoluteDifference = totalSum / totalCount;
-            if (averageAbsoluteDifference < 3) { // todo arbitrary choice - we probably want to go higher than this...
-                yPlane.insertBlock(row*2, col*2, yDiffs);
-                cbPlane.insertBlock(row, col, cbDiffs);
-                crPlane.insertBlock(row, col, crDiffs);
+                // Compute diffs
+                auto yDiffs = diff(yBlock, prevYBlock);
+                auto cbDiffs = diff(cbBlock, prevCbBlock);
+                auto crDiffs = diff(crBlock, prevCrBlock);
 
-                macroblockHeaders.push_back({true, 0, 0});
+                // Determine if the diffs found are actually good
+                auto totalCount = yDiffs.capacity() + cbDiffs.capacity() + crDiffs.capacity();
+                auto totalSum = sumAbsValues(yDiffs.data) + sumAbsValues(cbDiffs.data) + sumAbsValues(crDiffs.data);
+                auto averageAbsoluteDifference = totalSum / totalCount;
+
+                if (averageAbsoluteDifference < bestAAD) {
+                    bestAAD = averageAbsoluteDifference;
+                    bestX = x;
+                    bestY = y;
+                    bestDiffs = {yDiffs.data, cbDiffs.data, crDiffs.data};
+                    if (bestAAD < returnThreshold) {
+                        break; // If we get a really close match then kick-out early and use it.
+                    }
+                }
+            }
+
+            // If the average size of the diffs given by the match found isn't significantly smaller
+            // than the original data, then don't predict the block.
+            u32 totalSum = sumAbsValues(yPlane.data) + sumAbsValues(cbPlane.data) + sumAbsValues(crPlane.data);
+            u32 totalCount = yPlane.capacity() + cbPlane.capacity() + crPlane.capacity();
+            u32 minimumPredictionThreshold = (totalSum/totalCount)/2;
+            if (bestAAD < minimumPredictionThreshold) {
+                // Replace the original data for the macroblock with the pre-computed diffs.
+                matrix::Matrix<int> yDiff(numRows*2, numCols*2, bestDiffs.at(0));
+                yPlane.insertBlock(row*2, col*2, yDiff);
+                matrix::Matrix<int> cbDiff(numRows, numCols, bestDiffs.at(1));
+                cbPlane.insertBlock(row, col, cbDiff);
+                matrix::Matrix<int> crDiff(numRows, numCols, bestDiffs.at(2));
+                crPlane.insertBlock(row, col, crDiff);
+
+                // Compute the vector from the block being predicted to the block in the previous frame
+                // and store the header.
+                int motionVectorX = (int)bestX - (int)col;
+                int motionVectorY = (int)bestY - (int)row;
+                macroblockHeaders.push_back({true, motionVectorX, motionVectorY});
             }
             else {
+                // Use the original data for the macroblock.
                 macroblockHeaders.push_back({false, 0, 0});
             }
         }
