@@ -31,6 +31,7 @@
 #include "delta/delta.h"
 #include <stdexcept>
 #include "uvid_decode.h"
+#include <optional>
 
 dct::QualityLevel getQualityLevel(const std::string& qualityString) {
     if (qualityString == "low") {
@@ -105,19 +106,138 @@ void pushIFrame(OutputBitStream& outputBitStream, decode::CompressedIFrame& iFra
     writeBlocks(iFrame.cr, outputBitStream);
 }
 
+
+
+
+// todo currently unused. Remove if not used for local search
+u32 totalAbsoluteDifference(std::vector<int>& first, std::vector<int>& second) {
+    assert (first.size() == second.size());
+    u32 sum = 0;
+    for (int i = 0; i < first.size(); ++i) {
+        // todo if we're doing this repeatedly for each comparison,
+        //  we are probably doing it again once a good match is found.
+        //  We could optimize this by saving the results of the diff and re-using them.
+        int difference = first.at(i) - second.at(i);
+        sum += std::abs(difference);
+    }
+    return sum;
+}
+
+u32 averageAbsoluteDifference(matrix::Matrix<int>& block1, matrix::Matrix<int>& block2) {
+    // todo consider randomly omitting some comparisons
+    u32 totalDifference = totalAbsoluteDifference(block1.data, block2.data);
+    return totalDifference / block1.capacity();
+}
+
+struct Macroblock {
+    u32 topLeftX, topLeftY;
+    typedef matrix::Matrix<int> block_t;
+    block_t yBlock, cbBlock, crBlock;
+
+    Macroblock(block_t& y, block_t& cb, block_t& cr, u32 xCoord, u32 yCoord) :
+        yBlock(y), cbBlock(cb), crBlock(cr), topLeftX(xCoord), topLeftY(yCoord) {
+
+    }
+};
+u32 getDifferenceMeasure(Macroblock& first, Macroblock& second) {
+    // We assume that the two colour planes will either both be similar or both different
+    // and omit the calculation for the Cr plane.
+    auto cbDifference = averageAbsoluteDifference(first.cbBlock, second.cbBlock);
+    auto yDifference = averageAbsoluteDifference(first.yBlock, second.yBlock);
+    return (cbDifference + yDifference)/2;
+}
+
+Macroblock getMacroblockFromYUVFrame(YUVFrame420& previous, u32 row, u32 col, u32 height, u32 width) {
+    // Row and col give the top-left coordinates of the chunk of the previous block to be used.
+
+    // Copy the colour blocks.
+    std::vector<int> cbData, crData;
+    for (u32 x = col; x < col + width; ++x) {
+        for (u32 y = row; y < row + height; ++y) {
+            cbData.push_back(previous.Cb(x, y));
+            crData.push_back(previous.Cr(x, y));
+        }
+    }
+    // Copy the y blocks
+    std::vector<int> yData;
+    for (u32 x = col*2; x < (col + width)*2; ++x) {
+        for (u32 y = row*2; y < (row + height)*2; ++y) {
+            yData.push_back(previous.Y(x, y));
+        }
+    }
+
+    // Create the matrices and return the Macroblock struct
+    Macroblock::block_t yBlock(height*2, width*2, yData);
+    Macroblock::block_t cbBlock(height, width, cbData);
+    Macroblock::block_t crBlock(height, width, crData);
+    return Macroblock(yBlock, cbBlock, crBlock, col, row);
+}
+
+// Returns a macroblock if a match was found
+std::optional<Macroblock> localSearch(u32 row, u32 col, Macroblock& block, YUVFrame420& previous) {
+    // Start by searching (row, col) and the surrounding 8 spots.
+    // Then try searching in a larger ring outside of that
+    //      E.g.    (row-5, col-5); (row-5, col); (row-5, col+5);
+    //              (row, col-5); (row, col+5);
+    //              (row+5, col-5); (row+5, col); (row+5, col+5);
+
+    // todo tweak these by benchmarking
+    auto returnThreshold = 2; // If the difference measure is below this, then kick-out immediately as we have found a very good match
+    auto minThreshold = 10; // If the difference measure for all potential matches is above this, do not predict the block.
+
+    // If we're trying to minimize the size of the diffs, we might want to look at average size of difference vs average size of literal.
+
+    // todo actually search for a good match. Right now we're only looking at one place.
+    // First, search the same place in the previous frame.
+    auto blockHeight = block.cbBlock.rows;
+    auto blockWidth = block.cbBlock.cols;
+    auto prevBlock = getMacroblockFromYUVFrame(previous, row, col, blockHeight, blockWidth);
+    auto difference = getDifferenceMeasure(block, prevBlock);
+    if (difference < returnThreshold) {
+        return { prevBlock };
+    }
+    else {
+        return std::nullopt;
+    }
+}
+
+// Subtracts second from first
+matrix::Matrix<int> diff(matrix::Matrix<int>& first, matrix::Matrix<int>& second) {
+    assert (first.cols == second.cols && first.rows == second.rows);
+    std::vector<int> diffs(first.capacity());
+    for (int i = 0; i < first.capacity(); ++i) {
+        diffs.at(i) = first.data.at(i) - second.data.at(i);
+    }
+    return matrix::Matrix<int>(first.rows, first.cols, diffs);
+}
+
+u32 sumAbsValues(const std::vector<int>& v) {
+    u32 sum = 0;
+    for (auto i : v) {
+        sum += std::abs(i);
+    }
+    return sum;
+}
+
 decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previousFrame, dct::QualityLevel qualityLevel) {
     auto height = inputFrame.getIntPlaneY().rows;
     auto width = inputFrame.getIntPlaneY().cols;
     auto scaledHeight = height/2;
     auto scaledWidth = width/2;
 
-    // Get the data from each plane in the frame.
-    auto y = inputFrame.getIntPlaneY();
-    auto cb = inputFrame.getIntPlaneCb();
-    auto cr = inputFrame.getIntPlaneCr();
+    // Get the data from each plane in the new frame.
+    auto yPlane = inputFrame.getIntPlaneY();
+    auto cbPlane = inputFrame.getIntPlaneCb();
+    auto crPlane = inputFrame.getIntPlaneCr();
+
+    // Get the data from the previous frame.
+    auto prevYPlane = previousFrame.getIntPlaneY();
+    auto prevCbPlane = previousFrame.getIntPlaneCb();
+    auto prevCrPlane = previousFrame.getIntPlaneCr();
 
     // todo
     //  - Implement a function to determine if a given macroblock gives a good match
+    //      - Use either AAD or MSD to start. If there's time, try the other and compare compression results.
     //      - Look in the slides for metrics to use.
     //      - Remember that the motion vector is measured in the colour planes, not the Y plane.
     //      - Consider randomly choosing which subsets of the blocks to compare to save time.
@@ -131,30 +251,49 @@ decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previou
     //      - Only resort to this if we can't find a "good" match nearby.
     //      - Consider a random fade-away
 
-    // Take the difference between this frame and the previous one.
-    for (u32 row = 0; row < y.rows; ++row) {
-        for (u32 col = 0; col < y.cols; ++col){
-            int diff = y.at(row, col) - (int) (u32) previousFrame.Y(col, row);
-            y.set(row, col) = diff;
+
+    // Divide the image into macroblocks and record the headers.
+    std::vector<decode::MacroblockHeader> macroblockHeaders;
+    for (u32 row = 0; row < scaledHeight; row += 8) {
+        for (u32 col = 0; col < scaledWidth; col += 8) {
+            auto numRows = std::min(8u, scaledHeight - row);
+            auto numCols = std::min(8u, scaledWidth - col);
+            auto cbBlock = cbPlane.getBlock(row, col, numRows, numCols);
+            auto crBlock = crPlane.getBlock(row, col, numRows, numCols);
+            auto yBlock = yPlane.getBlock(row*2, col*2, numRows*2, numCols*2);
+
+            // For now, just compare against the same spot in the previous frame.
+            // todo add local search
+            auto prevCbBlock = prevCbPlane.getBlock(row, col, numRows, numCols);
+            auto prevCrBlock = prevCrPlane.getBlock(row, col, numRows, numCols);
+            auto prevYBlock = prevYPlane.getBlock(row*2, col*2, numRows*2, numCols*2);
+
+            // compute diffs
+            auto yDiffs = diff(yBlock, prevYBlock);
+            auto cbDiffs = diff(cbBlock, prevCbBlock);
+            auto crDiffs = diff(crBlock, prevCrBlock);
+
+            // Determine if the diffs found are actually good
+            auto totalCount = yDiffs.capacity() + cbDiffs.capacity() + crDiffs.capacity();
+            auto totalSum = sumAbsValues(yDiffs.data) + sumAbsValues(cbDiffs.data) + sumAbsValues(crDiffs.data);
+            auto averageAbsoluteDifference = totalSum / totalCount;
+            if (averageAbsoluteDifference < 3) { // todo arbitrary choice - we probably want to go higher than this...
+                yPlane.insertBlock(row*2, col*2, yDiffs);
+                cbPlane.insertBlock(row, col, cbDiffs);
+                crPlane.insertBlock(row, col, crDiffs);
+
+                macroblockHeaders.push_back({true, 0, 0});
+            }
+            else {
+                macroblockHeaders.push_back({false, 0, 0});
+            }
         }
     }
-    for (u32 row = 0; row < scaledHeight; ++row) {
-        for (u32 col = 0; col < scaledWidth; ++col){
-            int cbDiff = cb.at(row, col) - (int) (u32) previousFrame.Cb(col, row);
-            cb.set(row, col) = cbDiff;
 
-            int crDiff = cr.at(row, col) - (int) (u32) previousFrame.Cr(col, row);
-            cr.set(row, col) = crDiff;
-        }
-    }
-
-    auto encodedYPlane = dct::transform(y, dct::quantize::luminance(), qualityLevel);
-    auto encodedCbPlane = dct::transform(cb, dct::quantize::chromanance(), qualityLevel);
-    auto encodedCrPlane = dct::transform(cr, dct::quantize::chromanance(), qualityLevel);
-
-    // We aren't doing any clever searching yet, so we generate very simple macroblock headers
-    decode::MacroblockHeader unpredictedHeader {true, 0, 0};
-    std::vector<decode::MacroblockHeader> macroblockHeaders(encodedCbPlane.size(), unpredictedHeader);
+    // Run the DCT on the (partially) predicted planes.
+    auto encodedYPlane = dct::transform(yPlane, dct::quantize::luminance(), qualityLevel);
+    auto encodedCbPlane = dct::transform(cbPlane, dct::quantize::chromanance(), qualityLevel);
+    auto encodedCrPlane = dct::transform(crPlane, dct::quantize::chromanance(), qualityLevel);
 
     return decode::CompressedPFrame(height, width, encodedYPlane, encodedCbPlane, encodedCrPlane, macroblockHeaders);
 }
@@ -243,14 +382,14 @@ int main(int argc, char** argv) {
 }
 
 
-// todo remove
-// A dummy main() for debugging
+// todo remove  dummy main() for debugging
 //int main(int argc, char** argv) {
 int dummy(int argc, char** argv) {
     u32 width = 352, height = 288;
     auto qualityLevel = dct::med;
 
     auto filepath = "/home/jamie/csc485/CSC485B-Data-Compression/uvid/raw_videos/flower_352x288.raw";
+    std::cerr << "DUMMY MAIN RUNNING. Using hard-coded input file:\n\t" << filepath << std::endl;
     std::fstream infile(filepath);
 
     YUVStreamReader reader{infile, width, height};
