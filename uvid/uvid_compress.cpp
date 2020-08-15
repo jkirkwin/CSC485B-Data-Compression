@@ -1,9 +1,6 @@
 /* uvid_compress.cpp
    CSC 485B/578B/SENG 480B - Data Compression - Summer 2020
 
-   todo update this docstring
-   Starter code for Assignment 5
-
    Reads video data from stdin in uncompresed YCbCr (YUV) format 
    (With 4:2:0 subsampling). To produce this format from 
    arbitrary video data in a popular format, use the ffmpeg
@@ -20,18 +17,14 @@
 
 #include <iostream>
 #include <fstream>
-#include <array>
 #include <string>
 #include <cassert>
-#include <cstdint>
-#include <tuple>
 #include "output_stream.hpp"
 #include "yuv_stream.hpp"
 #include "dct/dct.h"
 #include "delta/delta.h"
 #include <stdexcept>
 #include "uvid_decode.h"
-#include <optional>
 
 dct::QualityLevel getQualityLevel(const std::string& qualityString) {
     if (qualityString == "low") {
@@ -106,43 +99,6 @@ void pushIFrame(OutputBitStream& outputBitStream, decode::CompressedIFrame& iFra
     writeBlocks(iFrame.cr, outputBitStream);
 }
 
-struct Macroblock {
-    u32 topLeftX, topLeftY;
-    typedef matrix::Matrix<int> block_t;
-    block_t yBlock, cbBlock, crBlock;
-
-    Macroblock(block_t& y, block_t& cb, block_t& cr, u32 xCoord, u32 yCoord) :
-        yBlock(y), cbBlock(cb), crBlock(cr), topLeftX(xCoord), topLeftY(yCoord) {
-
-    }
-};
-
-Macroblock getMacroblockFromYUVFrame(YUVFrame420& previous, u32 row, u32 col, u32 height, u32 width) {
-    // Row and col give the top-left coordinates of the chunk of the previous block to be used.
-
-    // Copy the colour blocks.
-    std::vector<int> cbData, crData;
-    for (u32 x = col; x < col + width; ++x) {
-        for (u32 y = row; y < row + height; ++y) {
-            cbData.push_back(previous.Cb(x, y));
-            crData.push_back(previous.Cr(x, y));
-        }
-    }
-    // Copy the y blocks
-    std::vector<int> yData;
-    for (u32 x = col*2; x < (col + width)*2; ++x) {
-        for (u32 y = row*2; y < (row + height)*2; ++y) {
-            yData.push_back(previous.Y(x, y));
-        }
-    }
-
-    // Create the matrices and return the Macroblock struct
-    Macroblock::block_t yBlock(height*2, width*2, yData);
-    Macroblock::block_t cbBlock(height, width, cbData);
-    Macroblock::block_t crBlock(height, width, crData);
-    return Macroblock(yBlock, cbBlock, crBlock, col, row);
-}
-
 std::vector<std::pair<u32, u32>> getLocalSearchCoordinates(u32 row, u32 col, u32 height, u32 width) {
     // Return each point above/below/diagonal by any of these amounts to the point given that lie inside the image.
     std::vector<int> spreadFactors {1, 10, 20}; // todo find better factors by benchmarking
@@ -202,14 +158,14 @@ decode::CompressedPFrame getPFrame(YUVFrame420& inputFrame, YUVFrame420& previou
     auto prevCrPlane = previousFrame.getIntPlaneCr();
 
     // todo
-    //      - Consider randomly choosing which subsets of the blocks to compare to save time.
+    //   - Consider randomly choosing which subsets of the blocks to compare to save time.
     //              - If we compare a small subset of cb, cr, and y chunks and get a good result
     //                that should give us high confidence.
     //  - search elsewhere
     //      - Only implement this if you have time
     //      - Only resort to this if we can't find a "good" match nearby.
     //      - Consider a random fade-away
-
+    //  - Refactor so this isn't a god function anymore.
 
     // Divide the image into macroblocks and record the headers.
     std::vector<decode::MacroblockHeader> macroblockHeaders;
@@ -354,7 +310,6 @@ void compress(u32 width, u32 height, dct::QualityLevel qualityLevel, YUVStreamRe
     outputBitStream.flush_to_byte();
 }
 
-//int NOT_MAIN(int argc, char** argv) { // todo remove this comment
 int main(int argc, char** argv) {
     if (argc < 4){
         std::cerr << "Usage: " << argv[0] << " <width> <height> <low/medium/high>" << std::endl;
@@ -366,27 +321,6 @@ int main(int argc, char** argv) {
 
     YUVStreamReader reader {std::cin, width, height};
     OutputBitStream outputBitStream {std::cout};
-
-    compress(width, height, qualityLevel, reader, outputBitStream);
-
-    srand(time(NULL)); // todo remove this unless needed.
-
-    return 0;
-}
-
-
-// todo remove  dummy main() for debugging
-//int main(int argc, char** argv) {
-int dummy(int argc, char** argv) {
-    u32 width = 352, height = 288;
-    auto qualityLevel = dct::med;
-
-    auto filepath = "/home/jamie/csc485/CSC485B-Data-Compression/uvid/raw_videos/flower_352x288.raw";
-    std::cerr << "DUMMY MAIN RUNNING. Using hard-coded input file:\n\t" << filepath << std::endl;
-    std::fstream infile(filepath);
-
-    YUVStreamReader reader{infile, width, height};
-    OutputBitStream outputBitStream{std::cout};
 
     compress(width, height, qualityLevel, reader, outputBitStream);
 

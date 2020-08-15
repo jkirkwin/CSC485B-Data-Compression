@@ -58,8 +58,6 @@ namespace decode {
     }
 
     void setPredictedYBlock(const MacroblockHeader &header, YUVFrame420 &previousFrame, YUVFrame420 &decodedFrame, u32 row, u32 col, decoded_plane_t& yPlane) {
-
-        // todo confirm that we can just multiply by 2 here.
         // To keep these values smaller, they are encoded in the sub-sampled colour planes' coordinates.
         int colOffset = header.motionVectorX * 2;
         int rowOffset = header.motionVectorY * 2;

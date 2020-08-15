@@ -1,14 +1,11 @@
 /* uvid_decompress.cpp
    CSC 485B/578B/SENG 480B - Data Compression - Summer 2020
 
-    todo update this docstring
-   Starter code for Assignment 5
-
-   This placeholder code reads the (basically uncompressed) data produced by
-   the uvid_compress starter code and outputs it in the uncompressed 
-   YCbCr (YUV) format used for the sample video input files. To play the 
-   the decompressed data stream directly, you can pipe the output of this
-   program to the ffplay program, with a command like 
+   This placeholder code reads the data produced by uvid_compress
+   and outputs it in the uncompressed YCbCr (YUV) format used for the
+   sample video input files. To play the the decompressed data stream
+   directly, you can pipe the output of this program to the ffplay program,
+   with a command like
 
      ffplay -f rawvideo -pixel_format yuv420p -framerate 30 -video_size 352x288 - 2>/dev/null
    (where the resolution is explicitly given as an argument to ffplay).
@@ -18,12 +15,7 @@
 */
 
 #include <iostream>
-#include <fstream>
-#include <array>
-#include <string>
 #include <cassert>
-#include <cstdint>
-#include <tuple>
 #include "input_stream.hpp"
 #include "yuv_stream.hpp"
 #include "dct/dct.h"
@@ -164,14 +156,7 @@ void decompress(InputBitStream& inputBitStream) {
 }
 
 int main() {
-    // todo remove debugging stuff
-//    auto filepath = "/home/jamie/csc485/CSC485B-Data-Compression/uvid/flower-decoded.uvi";
-//    std::fstream inFile(filepath);
-//    InputBitStream inStream(inFile);
-
     InputBitStream inStream(std::cin);
-
     decompress(inStream);
-
     return 0;
 }

@@ -6,6 +6,9 @@
 #include "input_stream.hpp"
 #include "dct/dct.h"
 
+/**
+ * Common decoding functionality needed by both compressor and decompressor.
+ */
 namespace decode {
 
     typedef std::vector<dct::encoded_block_t> encoded_plane_t;
