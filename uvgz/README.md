@@ -1,4 +1,4 @@
-# Assignmnet 2 - GZip Compressor (`uvgz`)
+# Assignment 2 - GZip Compressor (`uvgz`)
 
 ## Sources
 Almost all of the code here is my own. I used a couple of StackOverflow posts, mostly for finding out the most 
